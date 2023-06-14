@@ -1,12 +1,7 @@
 #!/usr/bin/env python
 from pathlib import Path
-from typing import List, Tuple
 
-from tensorflow import keras
-from tensorflow.data import Dataset
-
-import matplotlib.pyplot as plt  # type: ignore
-import numpy as np  # type: ignore
+from tensorflow.keras.callbacks import ModelCheckpoint
 
 from pps_mw_training import ici
 from pps_mw_training.evaluation import evaluate_model
@@ -62,7 +57,7 @@ if __name__ == "__main__":
             verbose=1,
             validation_data=validation_dataset.batch(batch_size=BATCH_SIZE),
             callbacks=[
-                keras.callbacks.ModelCheckpoint(
+                ModelCheckpoint(
                     MODEL_WEIGHTS,
                     save_best_only=True,
                     save_weights_only=True,
