@@ -61,7 +61,11 @@ def plot_prediction(
             max_value = 10
             value_range = np.array([min_value, max_value])
             plt.loglog(value_range, value_range, "-k", label="1-to-1")
-            bins = np.logspace(np.log10(min_value), np.log10(max_value), n_edges)
+            bins = np.logspace(
+                np.log10(min_value),
+                np.log10(max_value),
+                n_edges,
+            )
             for idx in [-1, 0, 1]:
                 center, q = get_stats(
                     bins,

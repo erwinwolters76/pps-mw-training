@@ -1,10 +1,6 @@
 import os
 from pathlib import Path
-from typing import Tuple
 
-from tensorflow.data import Dataset
-
-import numpy as np  # type: ignore
 import xarray as xr  # type: ignore
 
 

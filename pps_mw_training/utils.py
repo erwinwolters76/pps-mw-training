@@ -21,7 +21,7 @@ class Scaler:
         return np.vstack(
             [data[param["name"]].values for param in self.params]
         ).T
-    
+
     def apply(
         self,
         data: Dataset,
@@ -66,7 +66,7 @@ class Scaler:
         """Apply forward scaling."""
         if scale == "log":
             min_value = max(min_value, MIN_VALUE)
-            data[data == 0] = min_value 
+            data[data == 0] = min_value
             min_value = np.log(min_value)
             max_value = np.log(max_value)
             data = np.log(data)
@@ -92,7 +92,7 @@ class Scaler:
 
 def add_noise(
     dataset: Dataset,
-    params: List[float],
+    params: List[str],
     sigma: float,
 ) -> Dataset:
     """Add normal distributed noise to given params."""
@@ -103,9 +103,9 @@ def add_noise(
 
 def split_dataset(
     dataset: Dataset,
-    train_fraction: int,
-    validation_fraction: int,
-    test_fraction: int,
+    train_fraction: float,
+    validation_fraction: float,
+    test_fraction: float,
     dimension: str = "number_structures_db",
 ) -> Tuple[Dataset, Dataset, Dataset]:
     """Split dataset into a three parts."""
@@ -114,8 +114,13 @@ def split_dataset(
     test_limit = train_limit + int(test_fraction * n_samples)
     val_limit = test_limit + int(validation_fraction * n_samples)
     return (
-        dataset.sel({dimension: dataset[dimension].values[i0:i1]})
-        for (i0, i1) in  [
-            (0, train_limit), (train_limit, test_limit), (test_limit, n_samples),
-        ]
+        dataset.sel(
+            {dimension: dataset[dimension].values[0: train_limit]}
+        ),
+        dataset.sel(
+            {dimension: dataset[dimension].values[train_limit: test_limit]}
+        ),
+        dataset.sel(
+            {dimension: dataset[dimension].values[test_limit: val_limit]}
+        ),
     )

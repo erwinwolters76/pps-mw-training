@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Dict, Tuple, Union
+from typing import Any, List, Dict
 import json
 
 import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
-from tensorflow import keras  # type: ignore
+from tensorflow import keras
 from tensorflow.keras import layers  # type: ignore
 from tensorflow.keras.callbacks import ModelCheckpoint  # type: ignore
 from xarray import Dataset  # type: ignore
@@ -61,7 +61,9 @@ class QuantileModel:
         model.add(keras.Input(shape=(n_input_params,)))
         for _ in range(n_hidden_layers):
             model.add(layers.Dense(n_neurons_per_layer, activation=activation))
-        model.add(layers.Dense(n_output_params * len(quantiles), activation="linear"))
+        model.add(
+            layers.Dense(n_output_params * len(quantiles), activation="linear")
+        )
         model.summary()
         return model
 
@@ -105,7 +107,9 @@ class QuantileModel:
         )
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
-            loss=lambda y_true, y_pred: quantile_loss(n_outputs, quantiles, y_true, y_pred),
+            loss=lambda y_true, y_pred: quantile_loss(
+                n_outputs, quantiles, y_true, y_pred
+            ),
             metrics=['accuracy'],
         )
         input_scaler = Scaler(input_parameters)
@@ -151,11 +155,13 @@ class QuantileModel:
             )
 
     def _to_dataset(self, data: np.ndarray) -> Dataset:
-        """Transform numpy array holding retrieval data to a dataset.""" 
+        """Transform numpy array holding retrieval data to a dataset."""
         n = len(self.quantiles)
         return Dataset(
             data_vars={
-                param["name"]: (("t", "quantile"), data[:, idx * n:  (idx + 1) * n])
+                param["name"]: (
+                    ("t", "quantile"), data[:, idx * n:  (idx + 1) * n]
+                )
                 for idx, param in enumerate(self.postscaler.params)
             },
             coords={
@@ -188,9 +194,9 @@ def quantile_loss(
     e = tf.concat(
         [
             tf.expand_dims(y_true[:, i], 1) - y_pred[:, i * s: (i + 1) * s]
-            for i in range(n_params) 
+            for i in range(n_params)
         ],
         axis=1
-    ) 
+    )
     v = tf.maximum(q * e, (q - 1) * e)
     return tf.reduce_mean(v)

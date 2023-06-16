@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 from pathlib import Path
-
-from tensorflow.keras.callbacks import ModelCheckpoint
+from typing import Dict, List, Union, cast
 
 from pps_mw_training import ici
 from pps_mw_training.evaluation import evaluate_model
@@ -28,7 +27,7 @@ T_MUL = 2.0
 M_MUL = 1.0
 ALPHA = 0.0
 MODEL_CONFIG_PATH = Path("saved_model/network_config.json")
-INPUT_PARAMS = [
+INPUT_PARAMS: List[Dict[str, Union[str, float]]] = [
     {
         "name": "DTB_ICI_DB_ICI_01V",
         "scale": "linear",
@@ -132,7 +131,7 @@ INPUT_PARAMS = [
         "max": 35.,
     }
 ]
-OUTPUT_PARAMS = [
+OUTPUT_PARAMS: List[Dict[str, Union[str, float]]] = [
     {
         "name": "TCWV",
         "scale": "log",
@@ -176,9 +175,10 @@ if __name__ == "__main__":
     # Train a quantile regression neural network with simulated ICI data
     TRAIN = True
     FULL_DATASET = ici.load_retrieval_database()
+    PARAMS = [cast(str, p["name"]) for p in INPUT_PARAMS]
     FULL_DATASET = add_noise(
         FULL_DATASET,
-        params=[p["name"] for p in INPUT_PARAMS if p["name"].startswith("DTB")], 
+        params=[p for p in PARAMS if p.startswith("DTB")],
         sigma=NOISE,
     )
     TRAINING_DATA, TEST_DATA, VALIDATION_DATA = split_dataset(

@@ -6,7 +6,6 @@ channels:
 
 dependencies:
   - python=3.10
-  - cartopy
   - matplotlib
   - netcdf4
   - numpy
