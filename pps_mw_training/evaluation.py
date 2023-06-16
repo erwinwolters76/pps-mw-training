@@ -1,99 +1,62 @@
-from pathlib import Path
-from typing import List, Tuple
-
-from tensorflow import keras
-from tensorflow.data import Dataset
-
+from tensorflow import keras  # type: ignore
+from xarray import Dataset  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np  # type: ignore
-
-from pps_mw_training import ici
-from pps_mw_training.utils import to_numpy_arrays
 
 
 def evaluate_model(
     model: keras.Sequential,
     dataset: Dataset,
-    n_params: int,
-    quantiles: List[float],
 ) -> None:
     """Evaluate model."""
-    score = model.evaluate(dataset, verbose=0)
-    print(f"Test loss: {score[0]}")
-    print(f"Test accuracy: {score[1]}")
-    observation, state = to_numpy_arrays(dataset.unbatch())
-    predicted = model(observation)
-    evaluate_quantile_performance(
-        state,
-        predicted,
-        n_params,
-        quantiles,
-    )
-    plot_prediction(
-        state,
-        predicted,
-        n_params,
-        quantiles,
-    )
+    predicted = model.predict(dataset)
+    evaluate_quantile_performance(dataset, predicted)
+    plot_prediction(dataset, predicted)
 
 
 def evaluate_quantile_performance(
-    true_state: np.ndarray,
-    predicted_state: np.ndarray,
-    n_params: int,
-    quantiles: List[float],
+    true_state: Dataset,
+    predicted_state: Dataset,
 ) -> None:
     """Evaluate quantile performance."""
-    print("Evaluate quantile performance")
-    for i in range(n_params):
-        for j in range(len(quantiles)):
+    for param in predicted_state:
+        for j, quantile in enumerate(predicted_state["quantile"].values):
             obtained_quantile = np.count_nonzero(
-                predicted_state[:, i * len(quantiles) + j]
-                > true_state[:, i],
-            ) / predicted_state.shape[0]
-            print(f"param{i} quantile {quantiles[j]}: {obtained_quantile}")
+                predicted_state[param][:, j].values > true_state[param].values
+            ) / predicted_state.t.size
+            print(f"{param} quantile {quantile}: {obtained_quantile}")
 
 
 def plot_prediction(
     true_state: np.ndarray,
     predicted_state: np.ndarray,
-    n_params: int,
-    quantiles: List[float],
-    plot_error_bar: bool = True,
+    plot_error_bar: bool = False,
 ) -> None:
-    """Plot prediction."""
-    n_quantiles = len(quantiles)
-    for i in range(n_params):
+    """Plot prediction and the known state."""
+    n_quantiles = predicted_state["quantile"].size
+    for i, param in enumerate(predicted_state):
         plt.subplot(3, 2, i + 1)
-        predicted = predicted_state[:, int(n_quantiles // 2 + i * n_quantiles)]
-        value_range = [
-            np.floor(np.min(true_state[:, i])),
-            np.ceil(np.max(true_state[:, i]))
-        ]
-        plt.plot(value_range, value_range, "-k", label="1-to-1")
-        if plot_error_bar:
-            plt.errorbar(
-                true_state[:, i],
-                predicted,
-                [
-                    np.abs(predicted - predicted_state[:, i * n_quantiles]),
-                    np.abs(predicted_state[:, (i + 1) * (n_quantiles - 1)] - predicted),
-                ],
-                fmt=f"C{i}.",
-                label=f"median param{i}",
-                errorevery=10,
-            )
+        predicted = predicted_state[param][:, int(n_quantiles // 2)]
+        value_range = np.array(
+            [np.min(true_state[param]), np.max(true_state[param])]
+        )
+        if param in ["IWP", "LWP", "RWP"]:
+            plt.loglog(value_range, value_range, "-k", label="1-to-1")
+            plt.loglog(true_state[param], predicted, ".")
+            plt.xlim(1e-6, 30)
+            plt.ylim(1e-6, 30)
         else:
-            plt.plot(
-                true_state[:, i],
-                predicted,
-                f"C{i}.",
-                label=f"median param{i}",
-            )
+            scale = 1e6 if param == "Dmean" else 1.
+            value_range *= scale  
+            plt.plot(value_range, value_range, "-k", label="1-to-1")
+            plt.plot(scale * true_state[param], scale * predicted, ".")
+            plt.xlim(value_range)
+            plt.ylim(value_range)
+        plt.title(param)
         plt.grid(True)
-    plt.legend()
-    plt.xlim(value_range)
-    plt.ylim(value_range)
-    plt.xlabel("true state [-]")
-    plt.ylabel("predicted state [-]")
+        plt.legend()
+        if i >= 4:
+            plt.xlabel("true state [-]")
+        if i in [0, 2, 4]:
+            plt.ylabel("predicted state [-]")
     plt.show()

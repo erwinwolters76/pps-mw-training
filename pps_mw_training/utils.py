@@ -1,15 +1,93 @@
-from tensorflow.data import Dataset
-from typing import Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, List, Tuple, Union
 
+from xarray import Dataset  # type: ignore
 import numpy as np  # type: ignore
 
 
-def to_numpy_arrays(
-    dataset: Dataset
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Extract observation and state arrays from dataset."""
-    observation, state = tuple(zip(*dataset))
-    return np.array(observation), np.array(state)
+MIN_VALUE = 1e-6
+
+
+@dataclass
+class Scaler:
+    """Scaler object."""
+    params: List[Dict[str, Any]]
+
+    def as_numpy_array(
+        self,
+        data: Dataset,
+    ) -> np.ndarray:
+        """Return data as numpy array."""
+        return np.vstack(
+            [data[param["name"]].values for param in self.params]
+        ).T
+    
+    def apply(
+        self,
+        data: Dataset,
+        as_numpy_array: bool = True,
+    ) -> Union[np.ndarray, Dataset]:
+        """Apply forward scaling."""
+        for param in self.params:
+            data[param["name"]].values = self._apply(
+                data[param["name"]].values,
+                param["min"],
+                param["max"],
+                param["scale"],
+            )
+        if as_numpy_array:
+            return self.as_numpy_array(data)
+        return data
+
+    def reverse(
+        self,
+        data: Dataset,
+        as_numpy_array: bool = False,
+    ) -> Union[np.ndarray, Dataset]:
+        """Apply reversed scaling."""
+        for param in self.params:
+            data[param["name"]].values = self._reverse(
+                data[param["name"]].values,
+                param["min"],
+                param["max"],
+                param["scale"],
+            )
+        if as_numpy_array:
+            return self.as_numpy_array(data)
+        return data
+
+    @staticmethod
+    def _apply(
+        data: np.ndarray,
+        min_value: float,
+        max_value: float,
+        scale: str,
+    ) -> np.ndarray:
+        """Apply forward scaling."""
+        if scale == "log":
+            min_value = max(min_value, MIN_VALUE)
+            data[data == 0] = min_value 
+            min_value = np.log(min_value)
+            max_value = np.log(max_value)
+            data = np.log(data)
+        return 2 * (data - min_value) / (max_value - min_value) - 1
+
+    @staticmethod
+    def _reverse(
+        data: np.ndarray,
+        min_value: float,
+        max_value: float,
+        scale: str,
+    ) -> np.ndarray:
+        """Apply reversed scaling."""
+        if scale == "log":
+            min_value = max(min_value, MIN_VALUE)
+            min_value = np.log(min_value)
+            max_value = np.log(max_value)
+        data = 0.5 * (data + 1.) * (max_value - min_value) + min_value
+        if scale == "log":
+            data = np.exp(data)
+        return data
 
 
 def split_dataset(
@@ -17,32 +95,16 @@ def split_dataset(
     train_fraction: int,
     validation_fraction: int,
     test_fraction: int,
+    dimension: str = "number_structures_db",
 ) -> Tuple[Dataset, Dataset, Dataset]:
-    """Split dataset into a training, validation, and test dataset."""
-    n_samples = len(dataset)
-    train_size = int(train_fraction * n_samples)
-    val_size = int(validation_fraction * n_samples)
-    test_size = int(test_fraction * n_samples)
-    training_dataset = dataset.take(train_size)
-    test_dataset = dataset.skip(train_size)
-    validation_dataset = test_dataset.skip(val_size)
-    test_dataset = test_dataset.take(test_size)
-    return training_dataset, test_dataset, validation_dataset
-
-
-def create_simple_training_dataset(
-    n_samples: int,
-    n_channels: int,
-    n_params: int,
-) -> Dataset:
-    """Create a simple 'toy' training dataset."""
-    state = np.stack(
-        [i + 0.5 * np.random.randn(n_samples) for i in range(n_params)]
-    ).T
-    observation = np.zeros((n_samples, n_channels))
-    for i in range(n_channels):
-        noise = 0.01 * np.random.randn(n_samples)
-        weights = np.random.rand(n_params)
-        weighted = np.matmul(state, weights / np.sum(weights))
-        observation[:, i] = weighted + np.sin(weighted) + noise
-    return Dataset.from_tensor_slices((observation, state))
+    """Split dataset into a three parts."""
+    n_samples = dataset[dimension].size
+    train_limit = int(train_fraction * n_samples)
+    test_limit = train_limit + int(test_fraction * n_samples)
+    val_limit = test_limit + int(validation_fraction * n_samples)
+    return (
+        dataset.sel({dimension: dataset[dimension].values[i0:i1]})
+        for (i0, i1) in  [
+            (0, train_limit), (train_limit, test_limit), (test_limit, n_samples),
+        ]
+    )
