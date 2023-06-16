@@ -6,7 +6,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 from pps_mw_training import ici
 from pps_mw_training.evaluation import evaluate_model
 from pps_mw_training.model import QuantileModel
-from pps_mw_training.utils import split_dataset
+from pps_mw_training.utils import split_dataset, add_noise
 
 
 # model parameters
@@ -15,8 +15,9 @@ N_HIDDEN_LAYERS = 4
 N_NEURONS = 128
 ACTIVATION = "relu"
 # training parameters
+NOISE = 1.0
 BATCH_SIZE = 4096
-EPOCHS = 20
+EPOCHS = 32
 TRAIN_FRACTION = 0.7
 VALIDATION_FRACTION = 0.15
 TEST_FRACTION = 0.15
@@ -134,25 +135,25 @@ INPUT_PARAMS = [
 OUTPUT_PARAMS = [
     {
         "name": "TCWV",
-        "scale": "linear",
+        "scale": "log",
         "min": 0.,
         "max": 80.,
     },
     {
         "name": "LWP",
-        "scale": "linear",
+        "scale": "log",
         "min": 0.,
         "max": 2.,
     },
     {
         "name": "RWP",
-        "scale": "linear",
+        "scale": "log",
         "min": 0.,
         "max": 4.,
     },
     {
         "name": "IWP",
-        "scale": "linear",
+        "scale": "log",
         "min": 0.,
         "max": 35.,
     },
@@ -175,6 +176,11 @@ if __name__ == "__main__":
     # Train a quantile regression neural network with simulated ICI data
     TRAIN = True
     FULL_DATASET = ici.load_retrieval_database()
+    FULL_DATASET = add_noise(
+        FULL_DATASET,
+        params=[p["name"] for p in INPUT_PARAMS if p["name"].startswith("DTB")], 
+        sigma=NOISE,
+    )
     TRAINING_DATA, TEST_DATA, VALIDATION_DATA = split_dataset(
         FULL_DATASET,
         TRAIN_FRACTION,

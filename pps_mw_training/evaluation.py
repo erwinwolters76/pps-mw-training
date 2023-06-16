@@ -27,31 +27,55 @@ def evaluate_quantile_performance(
             print(f"{param} quantile {quantile}: {obtained_quantile}")
 
 
+def get_stats(bins, true_state: np.ndarray, predicted_state: np.ndarray):
+    retrived_median = np.zeros(bins.size - 1)
+    for idx in range(bins.size - 1):
+        filt = (true_state >= bins[idx]) & (true_state < bins[idx + 1])
+        retrived_median[idx] = np.median(predicted_state[filt])
+    return (bins[0:-1] + bins[1::]) / 2., retrived_median
+
+
 def plot_prediction(
     true_state: np.ndarray,
     predicted_state: np.ndarray,
-    plot_error_bar: bool = False,
+    n_edges: int = 200,
 ) -> None:
     """Plot prediction and the known state."""
+    plt.figure(figsize=(12, 10))
     n_quantiles = predicted_state["quantile"].size
+    n_edges = 200
     for i, param in enumerate(predicted_state):
         plt.subplot(3, 2, i + 1)
-        predicted = predicted_state[param][:, int(n_quantiles // 2)]
-        value_range = np.array(
-            [np.min(true_state[param]), np.max(true_state[param])]
-        )
+        idx_q = int(n_quantiles // 2)
         if param in ["IWP", "LWP", "RWP"]:
+            min_value = 1e-4
+            max_value = 10
+            value_range = np.array([min_value, max_value])
             plt.loglog(value_range, value_range, "-k", label="1-to-1")
-            plt.loglog(true_state[param], predicted, ".")
-            plt.xlim(1e-6, 30)
-            plt.ylim(1e-6, 30)
+            bins = np.logspace(np.log10(min_value), np.log10(max_value), n_edges)
+            for idx in [-1, 0, 1]:
+                center, q = get_stats(
+                    bins,
+                    true_state[param].values,
+                    predicted_state[param][:, idx_q + idx].values,
+                )
+                plt.loglog(center, q, "-", label=f"Q{idx + 2}")
         else:
             scale = 1e6 if param == "Dmean" else 1.
-            value_range *= scale  
+            min_value = np.min(true_state[param]) * scale
+            max_value = np.max(true_state[param]) * scale
+            value_range = np.array([min_value, max_value])
             plt.plot(value_range, value_range, "-k", label="1-to-1")
-            plt.plot(scale * true_state[param], scale * predicted, ".")
-            plt.xlim(value_range)
-            plt.ylim(value_range)
+            bins = np.linspace(min_value, max_value, n_edges)
+            for idx in [-1, 0, 1]:
+                center, q = get_stats(
+                    bins,
+                    true_state[param].values * scale,
+                    predicted_state[param][:, idx_q + idx].values * scale,
+                )
+                plt.plot(center, q, "-", label=f"Q{idx + 2}")
+        plt.xlim(value_range)
+        plt.ylim(value_range)
         plt.title(param)
         plt.grid(True)
         plt.legend()

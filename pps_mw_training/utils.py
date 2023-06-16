@@ -90,6 +90,17 @@ class Scaler:
         return data
 
 
+def add_noise(
+    dataset: Dataset,
+    params: List[float],
+    sigma: float,
+) -> Dataset:
+    """Add normal distributed noise to given params."""
+    for param in params:
+        dataset[param].values += sigma * np.random.randn(dataset[param].size)
+    return dataset
+
+
 def split_dataset(
     dataset: Dataset,
     train_fraction: int,

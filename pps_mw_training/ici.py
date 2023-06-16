@@ -18,7 +18,7 @@ RETRIEVAL_DB_FILE = Path(
 
 def load_retrieval_database(
     db_file: Path = RETRIEVAL_DB_FILE,
-    every_other: bool = True,
+    every_other: bool = False,
     dimension: str = "number_structures_db",
 ) -> xr.Dataset:
     """Load the retrieval database."""
