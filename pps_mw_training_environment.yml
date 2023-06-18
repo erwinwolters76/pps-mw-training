@@ -1,0 +1,13 @@
+name: pps-mw-training
+channels:
+  - conda-forge
+  - defaults
+  - nsidc
+
+dependencies:
+  - python=3.10
+  - matplotlib
+  - netcdf4
+  - numpy
+  - tensorflow
+  - xarray

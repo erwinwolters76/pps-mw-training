@@ -1,2 +1,8 @@
-*.nc*
-*.png*
+__pycache__
+*.conf
+*.nc
+*.pdf
+*.png
+*.egg-info
+*build
+*saved_model
