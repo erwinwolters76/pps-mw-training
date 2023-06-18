@@ -85,7 +85,7 @@ class QuantileModel:
         t_mul: float,
         m_mul: float,
         alpha: float,
-        output_file: Path,
+        output_path: Path,
     ) -> None:
         """Run the training pipeline fro the quantile model."""
         n_inputs = len(input_parameters)
@@ -114,7 +114,7 @@ class QuantileModel:
         )
         input_scaler = Scaler(input_parameters)
         output_scaler = Scaler(output_parameters)
-        weights_file = output_file.parents[0] / "weights.h5"
+        weights_file = output_path / "weights.h5"
         model.fit(
             tf.data.Dataset.from_tensor_slices(
                 (
@@ -138,7 +138,7 @@ class QuantileModel:
                 )
             ],
         )
-        with open(output_file, "w") as outfile:
+        with open(output_path / "network_config.json", "w") as outfile:
             outfile.write(
                 json.dumps(
                     {

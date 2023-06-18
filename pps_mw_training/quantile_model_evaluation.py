@@ -1,4 +1,7 @@
-from typing import Optional
+from pathlib import Path
+from typing import Dict, Optional
+import json
+
 from tensorflow import keras  # type: ignore
 from xarray import Dataset  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
@@ -8,24 +11,30 @@ import numpy as np  # type: ignore
 def evaluate_model(
     model: keras.Sequential,
     dataset: Dataset,
+    output_path: Path,
 ) -> None:
     """Evaluate model."""
     predicted = model.predict(dataset)
-    evaluate_quantile_performance(dataset, predicted)
-    plot_prediction(dataset, predicted)
+    evaluate_quantile_performance(dataset, predicted, output_path)
+    plot_prediction(dataset, predicted, output_path)
 
 
 def evaluate_quantile_performance(
     true_state: Dataset,
     predicted_state: Dataset,
+    output_path: Path,
 ) -> None:
     """Evaluate quantile performance."""
+    stats: Dict[str, Dict[float, float]] = {}
     for param in predicted_state:
+        stats[param] = {}
         for j, quantile in enumerate(predicted_state["quantile"].values):
             obtained_quantile = np.count_nonzero(
                 predicted_state[param][:, j].values > true_state[param].values
             ) / predicted_state.t.size
-            print(f"{param} quantile {quantile}: {obtained_quantile}")
+            stats[param][float(quantile)] = obtained_quantile
+    with open(output_path / "quantile_stats.json", "w") as outfile:
+        outfile.write(json.dumps(stats, indent=4))
 
 
 def get_stats(
@@ -46,6 +55,7 @@ def get_stats(
 def plot_prediction(
     true_state: Dataset,
     predicted_state: Dataset,
+    output_path: Path,
     n_edges: int = 100,
     min_iwp: float = 0.01,
 ) -> None:
@@ -104,4 +114,4 @@ def plot_prediction(
             plt.xlabel("true state [-]")
         if i in [0, 2, 4]:
             plt.ylabel("predicted state [-]")
-    plt.show()
+    plt.savefig(output_path / "prediction_performance.png")
