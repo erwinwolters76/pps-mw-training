@@ -219,7 +219,7 @@ def cli(args_list: List[str] = argv[1:]) -> None:
             "Training batch size, "
             f"default is {BATCH_SIZE}"
         ),
-        default=EPOCHS,
+        default=BATCH_SIZE,
     )
     parser.add_argument(
         "-d",
@@ -310,9 +310,9 @@ def cli(args_list: List[str] = argv[1:]) -> None:
             T_MUL,
             M_MUL,
             ALPHA,
-            MODEL_CONFIG_PATH,
+            model_config_path,
         )
-    model = QuantileModel.load(MODEL_CONFIG_PATH / "network_config.json")
+    model = QuantileModel.load(model_config_path / "network_config.json")
     evaluate_model(model, test_data, model_config_path)
 
 
