@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast, Any, List, Dict, Tuple
+from typing import cast, Any, List, Dict
 import json
 
 import numpy as np  # type: ignore
@@ -10,7 +10,6 @@ from tensorflow.keras.callbacks import ModelCheckpoint  # type: ignore
 from xarray import Dataset  # type: ignore
 
 from pps_mw_training.scaler import Scaler
-from pps_mw_training.utils import as_array
 
 
 @dataclass
@@ -34,16 +33,14 @@ class QuantileModel:
             config = json.load(config_file)
         input_params = config["input_parameters"]
         output_params = config["output_parameters"]
-        quantiles = config["quantiles"]
-        n_neurons = config["n_neurons_per_layer"]
-        activation = config["activation"]
-        n_layers = config["n_hidden_layers"]
-        layers: List[Tuple[int, str]] = [
-            (n_neurons, activation) for _ in range(n_layers)
-        ] + [
-            (len(output_params) * len(quantiles), "linear")
-        ]
-        model = cls.create(len(input_params), layers)
+        model = cls.create(
+            len(input_params),
+            len(output_params),
+            config["n_hidden_layers"],
+            config["n_neurons_per_layer"],
+            config["activation"],
+            config["quantiles"],
+        )
         model.compile()
         model.load_weights(config["model_weights"])
         return cls(
@@ -52,19 +49,32 @@ class QuantileModel:
             post_scaler=Scaler.from_dict(output_params),
             input_params=[p["name"] for p in input_params],
             output_params=[p["name"] for p in output_params],
-            quantiles=quantiles,
+            quantiles=config["quantiles"],
         )
 
     @staticmethod
     def create(
         n_input_params: int,
-        layers: List[Tuple[int, str]],
+        n_output_params: int,
+        n_hidden_layers: int,
+        n_neurons_per_layer: int,
+        activation: str,
+        quantiles: List[float],
     ) -> keras.Sequential:
-        """Create the model."""
+        """Create the quantile model."""
         model = keras.Sequential()
         model.add(keras.Input(shape=(n_input_params,)))
-        for n_neurons, activation in layers:
-            model.add(keras.layers.Dense(n_neurons, activation=activation))
+        for _ in range(n_hidden_layers):
+            model.add(
+                keras.layers.Dense(
+                    n_neurons_per_layer, activation=activation,
+                )
+            )
+        model.add(
+            keras.layers.Dense(
+                n_output_params * len(quantiles), activation="linear"
+            )
+        )
         model.summary()
         return model
 
@@ -93,12 +103,14 @@ class QuantileModel:
         output_params = [cast(str, p["name"]) for p in output_parameters]
         n_inputs = len(input_params)
         n_outputs = len(output_params)
-        layers: List[Tuple[int, str]] = [
-            (n_neurons_per_layer, activation) for _ in range(n_hidden_layers)
-        ] + [
-            (n_outputs * len(quantiles), "linear")
-        ]
-        model = cls.create(n_inputs, layers)
+        model = cls.create(
+            n_inputs,
+            n_outputs,
+            n_hidden_layers,
+            n_neurons_per_layer,
+            activation,
+            quantiles,
+        )
         learning_rate = tf.keras.optimizers.schedules.CosineDecayRestarts(
             initial_learning_rate=initial_learning_rate,
             first_decay_steps=first_decay_steps,
@@ -115,28 +127,21 @@ class QuantileModel:
         )
         input_scaler = Scaler.from_dict(input_parameters)
         output_scaler = Scaler.from_dict(output_parameters)
+        output_path.mkdir(parents=True, exist_ok=True)
         weights_file = output_path / "weights.h5"
         model.fit(
             tf.data.Dataset.from_tensor_slices(
                 (
-                    input_scaler.apply(
-                        as_array(training_data, input_params)
-                    ),
-                    output_scaler.apply(
-                        as_array(training_data, output_params)
-                    )
+                    cls.prescale(training_data, input_scaler, input_params),
+                    cls.prescale(training_data, output_scaler, output_params),
                 )
             ).batch(batch_size=batch_size),
             epochs=epochs,
             verbose=1,
             validation_data=tf.data.Dataset.from_tensor_slices(
                 (
-                    input_scaler.apply(
-                        as_array(validation_data, input_params)
-                    ),
-                    output_scaler.apply(
-                        as_array(validation_data, output_params)
-                    ),
+                    cls.prescale(validation_data, input_scaler, input_params),
+                    cls.prescale(validation_data, output_scaler, output_params),
                 )
             ).batch(batch_size=batch_size),
             callbacks=[
@@ -163,12 +168,16 @@ class QuantileModel:
                 )
             )
 
+    @staticmethod
     def prescale(
-        self,
         data: Dataset,
+        pre_scaler: Scaler,
+        input_params: List[str],
     ) -> np.ndarray:
         """Prescale data."""
-        return self.pre_scaler.apply(as_array(data, self.input_params))
+        return pre_scaler.apply(
+            np.column_stack([data[param].values for param in input_params])
+        )
 
     def postscale(
         self,
@@ -196,7 +205,9 @@ class QuantileModel:
         input_data: Dataset,
     ) -> Dataset:
         """Apply the trained neural network for a retrieval purpose."""
-        prescaled = self.prescale(input_data)
+        prescaled = self.prescale(
+            input_data, self.pre_scaler, self.input_params,
+        )
         predicted = self.model(prescaled)
         return self.postscale(predicted.numpy())
 

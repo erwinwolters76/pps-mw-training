@@ -4,14 +4,6 @@ from xarray import Dataset  # type: ignore
 import numpy as np  # type: ignore
 
 
-def as_array(
-    data: Dataset,
-    params: List[str],
-) -> np.ndarray:
-    """Get dataset as an array."""
-    return np.column_stack([data[param].values for param in params])
-
-
 def add_noise(
     dataset: Dataset,
     params: List[str],
