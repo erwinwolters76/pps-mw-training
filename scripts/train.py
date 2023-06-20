@@ -28,7 +28,7 @@ ACTIVATION = "relu"
 # training parameters
 NOISE = 1.0
 BATCH_SIZE = 4096
-EPOCHS = 32
+EPOCHS = 128
 TRAIN_FRACTION = 0.7
 VALIDATION_FRACTION = 0.15
 TEST_FRACTION = 0.15
@@ -38,7 +38,7 @@ FIRST_DECAY_STEPS = 1000
 T_MUL = 2.0
 M_MUL = 1.0
 ALPHA = 0.0
-MODEL_CONFIG_PATH = Path("saved_model")
+MODEL_CONFIG_PATH = Path("saved_model").resolve()
 INPUT_PARAMS: List[Dict[str, Union[str, float]]] = [
     {
         "name": "DTB_ICI_DB_ICI_01V",
@@ -219,7 +219,7 @@ def cli(args_list: List[str] = argv[1:]) -> None:
             "Training batch size, "
             f"default is {BATCH_SIZE}"
         ),
-        default=EPOCHS,
+        default=BATCH_SIZE,
     )
     parser.add_argument(
         "-d",
@@ -310,9 +310,9 @@ def cli(args_list: List[str] = argv[1:]) -> None:
             T_MUL,
             M_MUL,
             ALPHA,
-            MODEL_CONFIG_PATH,
+            model_config_path,
         )
-    model = QuantileModel.load(MODEL_CONFIG_PATH / "network_config.json")
+    model = QuantileModel.load(model_config_path / "network_config.json")
     evaluate_model(model, test_data, model_config_path)
 
 

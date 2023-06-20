@@ -1,16 +1,15 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Dict
+from typing import cast, Any, List, Dict
 import json
 
 import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 from tensorflow import keras
-from tensorflow.keras import layers  # type: ignore
 from tensorflow.keras.callbacks import ModelCheckpoint  # type: ignore
 from xarray import Dataset  # type: ignore
 
-from pps_mw_training.utils import Scaler
+from pps_mw_training.scaler import Scaler
 
 
 @dataclass
@@ -18,8 +17,10 @@ class QuantileModel:
     """Quantile regression neural network model object."""
 
     model: keras.Sequential
-    prescaler: Scaler
-    postscaler: Scaler
+    pre_scaler: Scaler
+    post_scaler: Scaler
+    input_params: List[str]
+    output_params: List[str]
     quantiles: List[float]
 
     @classmethod
@@ -30,9 +31,11 @@ class QuantileModel:
         """Load model from precalculated weights."""
         with open(model_config_file) as config_file:
             config = json.load(config_file)
+        input_params = config["input_parameters"]
+        output_params = config["output_parameters"]
         model = cls.create(
-            len(config["input_parameters"]),
-            len(config["output_parameters"]),
+            len(input_params),
+            len(output_params),
             config["n_hidden_layers"],
             config["n_neurons_per_layer"],
             config["activation"],
@@ -42,9 +45,11 @@ class QuantileModel:
         model.load_weights(config["model_weights"])
         return cls(
             model,
-            Scaler(config["input_parameters"]),
-            Scaler(config["output_parameters"]),
-            config["quantiles"],
+            pre_scaler=Scaler.from_dict(input_params),
+            post_scaler=Scaler.from_dict(output_params),
+            input_params=[p["name"] for p in input_params],
+            output_params=[p["name"] for p in output_params],
+            quantiles=config["quantiles"],
         )
 
     @staticmethod
@@ -60,9 +65,15 @@ class QuantileModel:
         model = keras.Sequential()
         model.add(keras.Input(shape=(n_input_params,)))
         for _ in range(n_hidden_layers):
-            model.add(layers.Dense(n_neurons_per_layer, activation=activation))
+            model.add(
+                keras.layers.Dense(
+                    n_neurons_per_layer, activation=activation,
+                )
+            )
         model.add(
-            layers.Dense(n_output_params * len(quantiles), activation="linear")
+            keras.layers.Dense(
+                n_output_params * len(quantiles), activation="linear"
+            )
         )
         model.summary()
         return model
@@ -88,8 +99,10 @@ class QuantileModel:
         output_path: Path,
     ) -> None:
         """Run the training pipeline fro the quantile model."""
-        n_inputs = len(input_parameters)
-        n_outputs = len(output_parameters)
+        input_params = [cast(str, p["name"]) for p in input_parameters]
+        output_params = [cast(str, p["name"]) for p in output_parameters]
+        n_inputs = len(input_params)
+        n_outputs = len(output_params)
         model = cls.create(
             n_inputs,
             n_outputs,
@@ -112,22 +125,23 @@ class QuantileModel:
             ),
             metrics=['accuracy'],
         )
-        input_scaler = Scaler(input_parameters)
-        output_scaler = Scaler(output_parameters)
+        input_scaler = Scaler.from_dict(input_parameters)
+        output_scaler = Scaler.from_dict(output_parameters)
+        output_path.mkdir(parents=True, exist_ok=True)
         weights_file = output_path / "weights.h5"
         model.fit(
             tf.data.Dataset.from_tensor_slices(
                 (
-                    input_scaler.apply(training_data),
-                    output_scaler.apply(training_data)
+                    cls.prescale(training_data, input_scaler, input_params),
+                    cls.prescale(training_data, output_scaler, output_params),
                 )
             ).batch(batch_size=batch_size),
             epochs=epochs,
             verbose=1,
             validation_data=tf.data.Dataset.from_tensor_slices(
                 (
-                    input_scaler.apply(validation_data),
-                    output_scaler.apply(validation_data)
+                    cls.prescale(validation_data, input_scaler, input_params),
+                    cls.prescale(validation_data, output_scaler, output_params),
                 )
             ).batch(batch_size=batch_size),
             callbacks=[
@@ -154,15 +168,32 @@ class QuantileModel:
                 )
             )
 
-    def _to_dataset(self, data: np.ndarray) -> Dataset:
+    @staticmethod
+    def prescale(
+        data: Dataset,
+        pre_scaler: Scaler,
+        input_params: List[str],
+    ) -> np.ndarray:
+        """Prescale data."""
+        return pre_scaler.apply(
+            np.column_stack([data[param].values for param in input_params])
+        )
+
+    def postscale(
+        self,
+        data: np.ndarray,
+    ) -> Dataset:
         """Transform numpy array holding retrieval data to a dataset."""
         n = len(self.quantiles)
         return Dataset(
             data_vars={
-                param["name"]: (
-                    ("t", "quantile"), data[:, idx * n:  (idx + 1) * n]
-                )
-                for idx, param in enumerate(self.postscaler.params)
+                param: (
+                    ("t", "quantile"),
+                    self.post_scaler.reverse(
+                        data[:, idx * n:  (idx + 1) * n],
+                        idx=idx,
+                    )
+                ) for idx, param in enumerate(self.output_params)
             },
             coords={
                 "quantile": ("quantile", self.quantiles)
@@ -174,12 +205,11 @@ class QuantileModel:
         input_data: Dataset,
     ) -> Dataset:
         """Apply the trained neural network for a retrieval purpose."""
-        predicted = self.model(
-            self.prescaler.apply(input_data)
+        prescaled = self.prescale(
+            input_data, self.pre_scaler, self.input_params,
         )
-        return self.postscaler.reverse(
-            self._to_dataset(predicted)
-        )
+        predicted = self.model(prescaled)
+        return self.postscale(predicted.numpy())
 
 
 def quantile_loss(
