@@ -56,7 +56,7 @@ def evaluate_quantile_performance(
                 predicted_state[param][:, j].values > true_state[param].values
             ) / predicted_state.t.size
             stats[param][float(quantile)] = obtained_quantile
-    with open(output_path / "quantile_stats_v2.json", "w") as outfile:
+    with open(output_path / "quantile_stats.json", "w") as outfile:
         outfile.write(json.dumps(stats, indent=4))
 
 
@@ -137,4 +137,4 @@ def plot_prediction(
             plt.xlabel("true state [-]")
         if i in [0, 2, 4]:
             plt.ylabel("predicted state [-]")
-    plt.savefig(output_path / "prediction_performance_v2.png")
+    plt.savefig(output_path / "prediction_performance.png")
