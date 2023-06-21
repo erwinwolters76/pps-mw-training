@@ -96,6 +96,8 @@ class QuantileModel:
         t_mul: float,
         m_mul: float,
         alpha: float,
+        missing_fraction: float,
+        fill_value: float,
         output_path: Path,
     ) -> None:
         """Run the training pipeline fro the quantile model."""
@@ -129,13 +131,19 @@ class QuantileModel:
         output_scaler = Scaler.from_dict(output_parameters)
         output_path.mkdir(parents=True, exist_ok=True)
         weights_file = output_path / "weights.h5"
-        model.fit(
+        fill_value = -2.
+        missing_fraction = 0.1
+        history = model.fit(
             tf.data.Dataset.from_tensor_slices(
                 (
                     cls.prescale(training_data, input_scaler, input_params),
                     cls.prescale(training_data, output_scaler, output_params),
                 )
-            ).batch(batch_size=batch_size),
+            ).batch(
+                batch_size=batch_size
+            ).map(
+                lambda x, y: (augmentation(x, missing_fraction, fill_value), y)
+            ),
             epochs=epochs,
             verbose=1,
             validation_data=tf.data.Dataset.from_tensor_slices(
@@ -143,7 +151,11 @@ class QuantileModel:
                     cls.prescale(validation_data, input_scaler, input_params),
                     cls.prescale(validation_data, output_scaler, output_params),
                 )
-            ).batch(batch_size=batch_size),
+            ).batch(
+                batch_size=batch_size
+            ).map(
+                lambda x, y: (augmentation(x, missing_fraction, fill_value), y)
+            ),
             callbacks=[
                 ModelCheckpoint(
                     weights_file,
@@ -152,6 +164,8 @@ class QuantileModel:
                 )
             ],
         )
+        with open(output_path / "fit_history.json", "w") as outfile:
+            outfile.write(json.dumps(history.history, indent=4))
         with open(output_path / "network_config.json", "w") as outfile:
             outfile.write(
                 json.dumps(
@@ -210,6 +224,27 @@ class QuantileModel:
         )
         predicted = self.model(prescaled)
         return self.postscale(predicted.numpy())
+
+
+@tf.function
+def augmentation(
+    x: tf.Tensor,
+    missing_fraction: float,
+    fill_value: float,
+) -> tf.Tensor:
+    """Set a fraction of the data to a given fill value."""
+    return tf.where(
+        tf.math.greater(
+            tf.random.uniform(
+                shape=(tf.shape(x)[0], tf.shape(x)[1]),
+                minval=0,
+                maxval=1,
+            ),
+            missing_fraction
+        ),
+        x,
+        fill_value,
+    )
 
 
 def quantile_loss(

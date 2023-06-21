@@ -26,12 +26,14 @@ N_HIDDEN_LAYERS = 4
 N_NEURONS_PER_HIDDEN_LAYER = 128
 ACTIVATION = "relu"
 # training parameters
-NOISE = 1.0
 BATCH_SIZE = 4096
 EPOCHS = 128
 TRAIN_FRACTION = 0.7
 VALIDATION_FRACTION = 0.15
 TEST_FRACTION = 0.15
+NOISE = 1.0
+FILL_VALUE = -2.
+MISSING_FRACTION = 0.1
 # learning rate parameters
 INITIAL_LEARNING_RATE = 0.0001
 FIRST_DECAY_STEPS = 1000
@@ -310,6 +312,8 @@ def cli(args_list: List[str] = argv[1:]) -> None:
             T_MUL,
             M_MUL,
             ALPHA,
+            MISSING_FRACTION,
+            FILL_VALUE,
             model_config_path,
         )
     model = QuantileModel.load(model_config_path / "network_config.json")
