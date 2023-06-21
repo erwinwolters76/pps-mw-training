@@ -124,7 +124,7 @@ INPUT_PARAMS: List[Dict[str, Union[str, float]]] = [
         "name": "SurfType",
         "scale": "linear",
         "min": 0.,
-        "max": 15.,
+        "max": 4.,
     },
     {
         "name": "SurfPres",
@@ -359,7 +359,7 @@ def cli(args_list: List[str] = argv[1:]) -> None:
     activation = args.activation
     missing_fraction = args.missing_fraction
     run_training = not args.only_evaluate
-    model_config_path = Path(args.model_config_path)
+    model_config_path = Path(args.model_config_path).resolve()
     training_data, test_data, validation_data = get_training_data(
         db_file,
         train_fraction,
