@@ -26,12 +26,14 @@ N_HIDDEN_LAYERS = 4
 N_NEURONS_PER_HIDDEN_LAYER = 128
 ACTIVATION = "relu"
 # training parameters
-NOISE = 1.0
 BATCH_SIZE = 4096
-EPOCHS = 128
+EPOCHS = 256
 TRAIN_FRACTION = 0.7
 VALIDATION_FRACTION = 0.15
 TEST_FRACTION = 0.15
+NOISE = 1.0
+FILL_VALUE = -2.
+MISSING_FRACTION = 0.1
 # learning rate parameters
 INITIAL_LEARNING_RATE = 0.0001
 FIRST_DECAY_STEPS = 1000
@@ -185,6 +187,9 @@ OUTPUT_PARAMS: List[Dict[str, Union[str, float]]] = [
 
 def get_training_data(
     ici_db_file: Path,
+    train_fraction: float,
+    validation_fraction: float,
+    test_fraction: float,
 ) -> Tuple[Dataset, Dataset, Dataset]:
     """Get training data."""
     full_dataset = ici.load_retrieval_database(ici_db_file)
@@ -196,19 +201,31 @@ def get_training_data(
     )
     return split_dataset(
         full_dataset,
-        TRAIN_FRACTION,
-        VALIDATION_FRACTION,
-        TEST_FRACTION,
+        train_fraction,
+        validation_fraction,
+        test_fraction,
     )
 
 
 def cli(args_list: List[str] = argv[1:]) -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Run the pps-mw training app for training "
-            "a quantile regression neural network to "
-            "retrieve ice water path from ICI data."""
+            "Run the pps-mw training app for the training of a single quantile "
+            "regression neural network, handling multiple quantiles and "
+            "retrieval parameters, and missing data, to retrieve ice water "
+            "path and other associated parameters from ICI data."
         )
+    )
+    parser.add_argument(
+        "-a",
+        "--activation",
+        dest="activation",
+        type=str,
+        help=(
+            "Activation function to use for the hidden layers, "
+            f"default is {ACTIVATION}"
+        ),
+        default=ACTIVATION,
     )
     parser.add_argument(
         "-b",
@@ -227,7 +244,7 @@ def cli(args_list: List[str] = argv[1:]) -> None:
         dest="db_file",
         type=str,
         help=(
-            "ICI retrieval database file, "
+            "Path to ICI retrieval database file to use as training data, "
             f"default is {ICI_RETRIEVAL_DB_FILE}"
         ),
         default=ICI_RETRIEVAL_DB_FILE,
@@ -238,7 +255,7 @@ def cli(args_list: List[str] = argv[1:]) -> None:
         dest="epochs",
         type=int,
         help=(
-            "Number of epochs, "
+            "Number of training epochs, "
             f"default is {EPOCHS}"
         ),
         default=EPOCHS,
@@ -253,6 +270,19 @@ def cli(args_list: List[str] = argv[1:]) -> None:
             f"default is {N_HIDDEN_LAYERS}"
         ),
         default=N_HIDDEN_LAYERS,
+    )
+    parser.add_argument(
+        "-m",
+        "--missing-fraction",
+        dest="missing_fraction",
+        type=float,
+        help=(
+            "Set this fraction of observations to a fill value, "
+            "in order to allow for the network to learn to handle "
+            "missing data, "
+            f"default is {MISSING_FRACTION}"
+        ),
+        default=MISSING_FRACTION,
     )
     parser.add_argument(
         "-n",
@@ -273,6 +303,39 @@ def cli(args_list: List[str] = argv[1:]) -> None:
         help="Flag for only evaluating a pretrained model",
     )
     parser.add_argument(
+        "-t",
+        "--train-fraction",
+        dest="train_fraction",
+        type=float,
+        help=(
+            "Fraction of the training dataset to use as training data, "
+            f"default is {TRAIN_FRACTION}"
+        ),
+        default=TRAIN_FRACTION,
+    )
+    parser.add_argument(
+        "-u",
+        "--test-fraction",
+        dest="test_fraction",
+        type=float,
+        help=(
+            "Fraction of the training dataset to use as test data, "
+            f"default is {TEST_FRACTION}"
+        ),
+        default=TEST_FRACTION,
+    )
+    parser.add_argument(
+        "-v",
+        "--validation-fraction",
+        dest="validation_fraction",
+        type=float,
+        help=(
+            "Fraction of the training dataset to use as validation data, "
+            f"default is {VALIDATION_FRACTION}"
+        ),
+        default=VALIDATION_FRACTION,
+    )
+    parser.add_argument(
         "-w",
         "--write",
         dest="model_config_path",
@@ -286,20 +349,30 @@ def cli(args_list: List[str] = argv[1:]) -> None:
     )
     args = parser.parse_args(args_list)
     db_file = Path(args.db_file)
+    train_fraction = args.train_fraction
+    validation_fraction = args.validation_fraction
+    test_fraction = args.test_fraction
     epochs = args.epochs
     batch_size = args.batch_size
     n_hidden_layers = args.n_hidden_layers
     n_neurons_per_hidden_layer = args.n_neurons_per_hidden_layer
+    activation = args.activation
+    missing_fraction = args.missing_fraction
     run_training = not args.only_evaluate
     model_config_path = Path(args.model_config_path)
-    training_data, test_data, validation_data = get_training_data(db_file)
+    training_data, test_data, validation_data = get_training_data(
+        db_file,
+        train_fraction,
+        validation_fraction,
+        test_fraction,
+    )
     if run_training:
         QuantileModel.train(
             INPUT_PARAMS,
             OUTPUT_PARAMS,
             n_hidden_layers,
             n_neurons_per_hidden_layer,
-            ACTIVATION,
+            activation,
             QUANTILES,
             training_data,
             validation_data,
@@ -310,10 +383,12 @@ def cli(args_list: List[str] = argv[1:]) -> None:
             T_MUL,
             M_MUL,
             ALPHA,
+            missing_fraction,
+            FILL_VALUE,
             model_config_path,
         )
     model = QuantileModel.load(model_config_path / "network_config.json")
-    evaluate_model(model, test_data, model_config_path)
+    evaluate_model(model, test_data, missing_fraction, model_config_path)
 
 
 if __name__ == "__main__":

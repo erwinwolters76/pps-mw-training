@@ -11,12 +11,35 @@ import numpy as np  # type: ignore
 def evaluate_model(
     model: keras.Sequential,
     dataset: Dataset,
+    missing_fraction: float,
     output_path: Path,
 ) -> None:
     """Evaluate model."""
+    plot_fit_history(output_path)
+    for param in model.input_params:
+        if dataset[param].dtype == np.float32:
+            filt = np.random.rand(dataset[param].size) < missing_fraction
+            dataset[param].values[filt] = np.nan
     predicted = model.predict(dataset)
     evaluate_quantile_performance(dataset, predicted, output_path)
     plot_prediction(dataset, predicted, output_path)
+
+
+def plot_fit_history(
+    history_path: Path
+) -> None:
+    """Plot training fit history."""
+    with open(history_path / "fit_history.json") as history_file:
+        history = json.load(history_file)
+    plt.figure()
+    plt.plot(history["loss"], label="training")
+    plt.plot(history["val_loss"], label="validation")
+    plt.ylabel("loss")
+    plt.ylim(
+        [0, np.max([np.column_stack([history["loss"], history["val_loss"]])])]
+    )
+    plt.legend()
+    plt.savefig(history_path / "fit_history.png")
 
 
 def evaluate_quantile_performance(

@@ -22,6 +22,7 @@ class QuantileModel:
     input_params: List[str]
     output_params: List[str]
     quantiles: List[float]
+    fill_value: float
 
     @classmethod
     def load(
@@ -50,6 +51,7 @@ class QuantileModel:
             input_params=[p["name"] for p in input_params],
             output_params=[p["name"] for p in output_params],
             quantiles=config["quantiles"],
+            fill_value=config["fill_value"]
         )
 
     @staticmethod
@@ -96,6 +98,8 @@ class QuantileModel:
         t_mul: float,
         m_mul: float,
         alpha: float,
+        missing_fraction: float,
+        fill_value: float,
         output_path: Path,
     ) -> None:
         """Run the training pipeline fro the quantile model."""
@@ -123,19 +127,22 @@ class QuantileModel:
             loss=lambda y_true, y_pred: quantile_loss(
                 n_outputs, quantiles, y_true, y_pred
             ),
-            metrics=['accuracy'],
         )
         input_scaler = Scaler.from_dict(input_parameters)
         output_scaler = Scaler.from_dict(output_parameters)
         output_path.mkdir(parents=True, exist_ok=True)
         weights_file = output_path / "weights.h5"
-        model.fit(
+        history = model.fit(
             tf.data.Dataset.from_tensor_slices(
                 (
                     cls.prescale(training_data, input_scaler, input_params),
                     cls.prescale(training_data, output_scaler, output_params),
                 )
-            ).batch(batch_size=batch_size),
+            ).batch(
+                batch_size=batch_size
+            ).map(
+                lambda x, y: (augmentation(x, missing_fraction, fill_value), y)
+            ),
             epochs=epochs,
             verbose=1,
             validation_data=tf.data.Dataset.from_tensor_slices(
@@ -143,7 +150,11 @@ class QuantileModel:
                     cls.prescale(validation_data, input_scaler, input_params),
                     cls.prescale(validation_data, output_scaler, output_params),
                 )
-            ).batch(batch_size=batch_size),
+            ).batch(
+                batch_size=batch_size
+            ).map(
+                lambda x, y: (augmentation(x, missing_fraction, fill_value), y)
+            ),
             callbacks=[
                 ModelCheckpoint(
                     weights_file,
@@ -152,6 +163,8 @@ class QuantileModel:
                 )
             ],
         )
+        with open(output_path / "fit_history.json", "w") as outfile:
+            outfile.write(json.dumps(history.history, indent=4))
         with open(output_path / "network_config.json", "w") as outfile:
             outfile.write(
                 json.dumps(
@@ -162,6 +175,7 @@ class QuantileModel:
                         "n_neurons_per_layer": n_neurons_per_layer,
                         "activation": activation,
                         "quantiles": quantiles,
+                        "fill_value": fill_value,
                         "model_weights": weights_file.as_posix(),
                     },
                     indent=4,
@@ -208,8 +222,30 @@ class QuantileModel:
         prescaled = self.prescale(
             input_data, self.pre_scaler, self.input_params,
         )
+        prescaled[~np.isfinite(prescaled)] = self.fill_value
         predicted = self.model(prescaled)
         return self.postscale(predicted.numpy())
+
+
+@tf.function
+def augmentation(
+    x: tf.Tensor,
+    missing_fraction: float,
+    fill_value: float,
+) -> tf.Tensor:
+    """Set a fraction of the data to a given fill value."""
+    return tf.where(
+        tf.math.greater(
+            tf.random.uniform(
+                shape=(tf.shape(x)[0], tf.shape(x)[1]),
+                minval=0,
+                maxval=1,
+            ),
+            missing_fraction
+        ),
+        x,
+        fill_value,
+    )
 
 
 def quantile_loss(
