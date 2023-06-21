@@ -11,12 +11,35 @@ import numpy as np  # type: ignore
 def evaluate_model(
     model: keras.Sequential,
     dataset: Dataset,
+    missing_fraction: float,
     output_path: Path,
 ) -> None:
     """Evaluate model."""
+    plot_fit_history(output_path)
+    for param in model.input_params:
+        if dataset[param].dtype == np.float32:
+            filt = np.random.rand(dataset[param].size) < missing_fraction
+            dataset[param].values[filt] = np.nan
     predicted = model.predict(dataset)
     evaluate_quantile_performance(dataset, predicted, output_path)
     plot_prediction(dataset, predicted, output_path)
+
+
+def plot_fit_history(
+    history_path: Path
+) -> None:
+    """Plot training fit history."""
+    with open(history_path / "fit_history.json") as history_file:
+        history = json.load(history_file)
+    plt.figure()
+    plt.plot(history["loss"], label="training")
+    plt.plot(history["val_loss"], label="validation")
+    plt.ylabel("loss")
+    plt.ylim(
+        [0, np.max([np.column_stack([history["loss"], history["val_loss"]])])]
+    )
+    plt.legend()
+    plt.savefig(history_path / "fit_history.png")
 
 
 def evaluate_quantile_performance(
@@ -33,7 +56,7 @@ def evaluate_quantile_performance(
                 predicted_state[param][:, j].values > true_state[param].values
             ) / predicted_state.t.size
             stats[param][float(quantile)] = obtained_quantile
-    with open(output_path / "quantile_stats.json", "w") as outfile:
+    with open(output_path / "quantile_stats_v2.json", "w") as outfile:
         outfile.write(json.dumps(stats, indent=4))
 
 
@@ -114,4 +137,4 @@ def plot_prediction(
             plt.xlabel("true state [-]")
         if i in [0, 2, 4]:
             plt.ylabel("predicted state [-]")
-    plt.savefig(output_path / "prediction_performance.png")
+    plt.savefig(output_path / "prediction_performance_v2.png")

@@ -22,6 +22,7 @@ class QuantileModel:
     input_params: List[str]
     output_params: List[str]
     quantiles: List[float]
+    fill_value: float
 
     @classmethod
     def load(
@@ -50,6 +51,7 @@ class QuantileModel:
             input_params=[p["name"] for p in input_params],
             output_params=[p["name"] for p in output_params],
             quantiles=config["quantiles"],
+            fill_value=config["fill_value"]
         )
 
     @staticmethod
@@ -125,14 +127,11 @@ class QuantileModel:
             loss=lambda y_true, y_pred: quantile_loss(
                 n_outputs, quantiles, y_true, y_pred
             ),
-            metrics=['accuracy'],
         )
         input_scaler = Scaler.from_dict(input_parameters)
         output_scaler = Scaler.from_dict(output_parameters)
         output_path.mkdir(parents=True, exist_ok=True)
         weights_file = output_path / "weights.h5"
-        fill_value = -2.
-        missing_fraction = 0.1
         history = model.fit(
             tf.data.Dataset.from_tensor_slices(
                 (
@@ -176,6 +175,7 @@ class QuantileModel:
                         "n_neurons_per_layer": n_neurons_per_layer,
                         "activation": activation,
                         "quantiles": quantiles,
+                        "fill_value": fill_value,
                         "model_weights": weights_file.as_posix(),
                     },
                     indent=4,
@@ -222,6 +222,7 @@ class QuantileModel:
         prescaled = self.prescale(
             input_data, self.pre_scaler, self.input_params,
         )
+        prescaled[~np.isfinite(prescaled)] = self.fill_value
         predicted = self.model(prescaled)
         return self.postscale(predicted.numpy())
 
