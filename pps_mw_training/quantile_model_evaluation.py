@@ -3,7 +3,7 @@ from typing import Dict, Optional
 import json
 
 from tensorflow import keras  # type: ignore
-from xarray import Dataset  # type: ignore
+from xarray import DataArray, Dataset  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np  # type: ignore
 
@@ -22,6 +22,7 @@ def evaluate_model(
             dataset[param].values[filt] = np.nan
     predicted = model.predict(dataset)
     evaluate_quantile_performance(dataset, predicted, output_path)
+    evaluate_distribution_performance(dataset, predicted, output_path)
     plot_prediction(dataset, predicted, output_path)
 
 
@@ -58,6 +59,102 @@ def evaluate_quantile_performance(
             stats[param][float(quantile)] = obtained_quantile
     with open(output_path / "quantile_stats.json", "w") as outfile:
         outfile.write(json.dumps(stats, indent=4))
+
+
+def evaluate_distribution_performance(
+    true_state: Dataset,
+    predicted_state: Dataset,
+    output_path: Path,
+) -> None:
+    """Evaluate retrieved distribution performance."""
+    min_value = 1e-5
+    min_value_plot = 1e-4
+    max_value = 10
+    n_points = 100
+    quantile = 0.5
+    plot_range = np.array([min_value_plot, max_value])
+    edges = np.logspace(np.log10(min_value), np.log10(max_value), n_points)
+    true_stats = get_distribution(
+        true_state["IWP"] + min_value,
+        edges,
+        predicted_state["quantile"].values,
+    )
+    predicted_stats = get_distribution(
+        predicted_state["IWP"].sel(quantile=quantile) + min_value,
+        edges,
+        predicted_state["quantile"].values,
+    )
+    stats = {
+        "true": true_stats.data.values.tolist(),
+        "predicted": predicted_stats.data.values.tolist(),
+        "quantile": true_stats["quantile"].values.tolist(),
+
+        "cvm":  np.sqrt(  # Cramer-von Mises criterion
+            np.trapz(
+                (true_stats.dist - predicted_stats.dist) ** 2,
+                predicted_stats.dist
+            )
+        )
+    }
+    with open(output_path / "prediction_dist_stats.json", "w") as outfile:
+        outfile.write(json.dumps(stats, indent=4))
+    plt.figure(figsize=(7, 10))
+    plt.subplot(2, 1, 1)
+    plt.loglog(true_stats.x, true_stats.pdf, label="True")
+    plt.loglog(predicted_stats.x, predicted_stats.pdf, label="Predicted")
+    plt.xlabel("IWP [kg/m2]")
+    plt.ylabel("PDF [1/(kg/m2)]")
+    plt.xlim(plot_range)
+    plt.grid(True)
+    plt.legend()
+    plt.subplot(2, 1, 2)
+    plt.semilogx(true_stats.x, true_stats.dist)
+    plt.semilogx(predicted_stats.x, predicted_stats.dist)
+    plt.xlabel("IWP [kg/m2]")
+    plt.ylabel("CDF [-]")
+    plt.xlim(plot_range)
+    plt.ylim([-0.03, 1.03])
+    plt.grid(True)
+    plt.savefig(output_path / "prediction_distribution_performance.png")
+    plt.figure(figsize=(7, 5))
+    plt.semilogy(true_stats["quantile"], true_stats.data, label="True")
+    plt.semilogy(
+        predicted_stats["quantile"], predicted_stats.data, label="Predicted",
+    )
+    plt.xlabel("quantile [-]")
+    plt.ylabel("IWP [kg/m2]")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(output_path / "prediction_quantile_performance.png")
+
+
+def get_distribution(
+    data: DataArray,
+    edges: np.ndarray,
+    quantiles: np.ndarray,
+) -> Dataset:
+    """Get pdf and distribution."""
+    lower = edges[0:-1]
+    upper = edges[1::]
+    center = (lower + upper) / 2.
+    bin_size = upper - lower
+    count, _ = np.histogram(data, edges)
+    pdf = count / bin_size / np.sum(count)
+    dist = np.cumsum(pdf * bin_size)
+    return Dataset(
+        data_vars={
+            "pdf": ("x", pdf),
+            "dist": ("x", dist),
+            "data": ("quantile", np.interp(quantiles, dist, center))
+        },
+        coords={
+            "x": ("x", center),
+            "quantile": quantiles,
+        },
+        attrs={
+            "mean": np.trapz(center * pdf, center),
+        }
+    )
 
 
 def get_stats(
