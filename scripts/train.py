@@ -7,8 +7,8 @@ import os
 
 from xarray import Dataset  # type: ignore
 
-from pps_mw_training import ici
-from pps_mw_training.quantile_model_evaluation import evaluate_model
+from pps_mw_training.data import ici
+from pps_mw_training.evaluation.quantile_model_evaluation import evaluate_model
 from pps_mw_training.quantile_model import QuantileModel
 from pps_mw_training.utils import split_dataset, add_noise
 
