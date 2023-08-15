@@ -2,11 +2,15 @@ from pathlib import Path
 import os
 
 
-MODEL_CONFIG_PATH = Path(os.environ.get("MODEL_CONFIG_PR_NORDIC", "/tmp"))
+MODEL_CONFIG_PATH = Path(
+    os.environ.get("MODEL_CONFIG_PR_NORDIC", "/tmp")
+)
+TRAINING_DATA_PATH = Path(
+    os.environ.get("TRAINING_DATA_PATH_PR_NORDIC", "/tmp")
+)
 # model parameters
-N_INPUTS = 5
+CHANNELS = [14, 15, 16, 17, 18]
 QUANTILES = [0.005, 0.025, 0.165, 0.250, 0.500, 0.750, 0.835, 0.975, 0.995]
-N_OUTPUTS = len(QUANTILES)
 N_UNET_BASE = 16
 N_FEATURES = 128
 N_LAYERS = 4

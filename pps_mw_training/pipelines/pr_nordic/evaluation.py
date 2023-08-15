@@ -15,7 +15,7 @@ def evaluate_model(
     """Evaluata model, very rudimentary for the moment."""
     unet_model.model.summary()
     keras.utils.plot_model(
-        unet_model.model.build_graph(128, settings.N_INPUTS),
+        unet_model.model.build_graph(128, len(settings.CHANNELS)),
         to_file=settings.MODEL_CONFIG_PATH / "model.png",
         show_shapes=True,
         show_dtype=False,
@@ -28,7 +28,7 @@ def evaluate_model(
     )
     test_data = prepare_dataset(
         dataset,
-        settings.N_INPUTS,
+        len(settings.CHANNELS),
         settings.BATCH_SIZE,
         augment=False,
     )

@@ -24,6 +24,7 @@ def add_parser(
     missing_fraction: Optional[float] = None,
     activation: Optional[str] = None,
     db_file: Optional[Path] = None,
+    training_data_path: Optional[Path] = None,
 ):
     """Add parser and set default values."""
     parser = subparsers.add_parser(
@@ -43,6 +44,17 @@ def add_parser(
             ),
             default=activation,
         )
+    parser.add_argument(
+        "-b",
+        "--batchsize",
+        dest="batch_size",
+        type=int,
+        help=(
+            "Training batch size, "
+            f"default is {batchsize}"
+        ),
+        default=batchsize,
+    )
     if db_file is not None:
         parser.add_argument(
             "-d",
@@ -55,28 +67,7 @@ def add_parser(
             ),
             default=db_file.as_posix(),
         )
-    parser.add_argument(
-        "-l",
-        "--layers",
-        dest="n_hidden_layers",
-        type=int,
-        help=(
-            "Number of hidden layers, "
-            f"default is {n_hidden_layers}"
-        ),
-        default=n_hidden_layers,
-    )
-    parser.add_argument(
-        "-b",
-        "--batchsize",
-        dest="batch_size",
-        type=int,
-        help=(
-            "Training batch size, "
-            f"default is {batchsize}"
-        ),
-        default=batchsize,
-    )
+
     parser.add_argument(
         "-e",
         "--epochs",
@@ -87,6 +78,17 @@ def add_parser(
             f"default is {n_epochs}"
         ),
         default=n_epochs,
+    )
+    parser.add_argument(
+        "-l",
+        "--layers",
+        dest="n_hidden_layers",
+        type=int,
+        help=(
+            "Number of hidden layers, "
+            f"default is {n_hidden_layers}"
+        ),
+        default=n_hidden_layers,
     )
     if missing_fraction is not None:
         parser.add_argument(
@@ -119,6 +121,18 @@ def add_parser(
         action="store_true",
         help="Flag for only evaluating a pretrained model",
     )
+    if training_data_path is not None:
+        parser.add_argument(
+            "-p",
+            "--training-datapath",
+            dest="training_data_path",
+            type=str,
+            help=(
+                "Path to training data, "
+                f"default is {training_data_path.as_posix()}"
+            ),
+            default=training_data_path.as_posix(),
+        )
     parser.add_argument(
         "-t",
         "--train-fraction",
@@ -186,6 +200,7 @@ def cli(args_list: list[str] = argv[1:]) -> None:
         pnt.settings.VALIDATION_FRACTION,
         pnt.settings.TEST_FRACTION,
         pnt.settings.MODEL_CONFIG_PATH,
+        training_data_path=pnt.settings.TRAINING_DATA_PATH,
     )
     add_parser(
         subparsers,
@@ -215,6 +230,7 @@ def cli(args_list: list[str] = argv[1:]) -> None:
         pnt.train(
             args.n_hidden_layers,
             args.n_neurons_per_hidden_layer,
+            Path(args.training_data_path),
             args.train_fraction,
             args.validation_fraction,
             args.test_fraction,

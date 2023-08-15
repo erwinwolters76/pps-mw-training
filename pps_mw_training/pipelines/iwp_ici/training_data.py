@@ -55,20 +55,19 @@ def split_dataset(
     test_fraction: float,
     dimension: str = "number_structures_db",
 ) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
-    """Split dataset into a three parts."""
+    """Split dataset into three parts."""
     n_samples = dataset[dimension].size
-    train_limit = int(train_fraction * n_samples)
-    test_limit = train_limit + int(test_fraction * n_samples)
-    val_limit = test_limit + int(validation_fraction * n_samples)
+    fractions = [train_fraction, validation_fraction, test_fraction]
+    limits = np.cumsum([int(f * n_samples) for f in fractions])
     return (
         dataset.sel(
-            {dimension: dataset[dimension].values[0: train_limit]}
+            {dimension: dataset[dimension].values[0: limits[0]]}
         ),
         dataset.sel(
-            {dimension: dataset[dimension].values[train_limit: test_limit]}
+            {dimension: dataset[dimension].values[limits[0]: limits[1]]}
         ),
         dataset.sel(
-            {dimension: dataset[dimension].values[test_limit: val_limit]}
+            {dimension: dataset[dimension].values[limits[1]: limits[2]]}
         ),
     )
 

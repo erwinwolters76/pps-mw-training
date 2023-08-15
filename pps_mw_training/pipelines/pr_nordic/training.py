@@ -9,6 +9,7 @@ from pps_mw_training.pipelines.pr_nordic import training_data
 def train(
     n_layers: int,
     n_features: int,
+    training_data_path: Path,
     train_fraction: float,
     validation_fraction: float,
     test_fraction: float,
@@ -19,13 +20,15 @@ def train(
 ):
     "Run the Nordic precip training pipeline.",
     train_ds, val_ds, test_ds = training_data.get_training_dataset(
+        training_data_path,
         train_fraction,
         validation_fraction,
         test_fraction,
+        settings.CHANNELS,
     )
     if not only_evaluate:
         UNetModel.train(
-            settings.N_INPUTS,
+            len(settings.CHANNELS),
             settings.N_UNET_BASE,
             n_features,
             n_layers,
