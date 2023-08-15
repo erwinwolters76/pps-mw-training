@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+import json
 
 import tensorflow as tf  # type: ignore
 from tensorflow import keras
@@ -53,8 +54,8 @@ class UNetBaseModel(keras.Model):
         u = self.up_block_4([u, d_0])
         return self.out_block(u)
 
-    def build_graph(self):
-        x = keras.Input(shape=(128, 128, 5))
+    def build_graph(self, image_size: int, n_inputs: int):
+        x = keras.Input(shape=(image_size, image_size, n_inputs))
         return keras.Model(inputs=[x], outputs=self.call(x))
 
 
@@ -66,19 +67,22 @@ class UNetModel:
     @classmethod
     def load(
         cls,
-        n_inputs: int,
-        n_outputs: int,
-        n_unet_base: int,
-        n_features: int,
-        n_layers: int,
-        model_weights: Path,
+        model_config_file: Path,
     ) -> "UNetModel":
-        """Load the model."""
+        """Load the model from config file."""
+        with open(model_config_file) as config_file:
+            config = json.load(config_file)
+        n_inputs = config["n_inputs"]
+        n_outputs = len(config["quantiles"])
         model = UNetBaseModel(
-            n_inputs, n_outputs, n_unet_base, n_features, n_layers,
+            n_inputs,
+            n_outputs,
+            config["n_unet_base"],
+            config["n_features"],
+            config["n_layers"],
         )
         model.build((None, None, None, n_inputs))
-        model.load_weights(model_weights)
+        model.load_weights(config["model_weights"])
         return cls(model)
 
     @staticmethod
@@ -97,7 +101,7 @@ class UNetModel:
         t_mul: float,
         m_mul: float,
         alpha: float,
-        model_weights: Path,
+        output_path: Path,
     ) -> None:
         """Train the model."""
         n_outputs = len(quantiles)
@@ -125,7 +129,8 @@ class UNetModel:
             m_mul=m_mul,
             alpha=alpha,
         )
-        model.fit(
+        weights_file = output_path / "weights.h5"
+        history = model.fit(
             prepare_dataset(training_data, n_inputs, batch_size, augment=True),
             epochs=n_epochs,
             validation_data=prepare_dataset(
@@ -136,12 +141,35 @@ class UNetModel:
             ),
             callbacks=[
                 keras.callbacks.ModelCheckpoint(
-                    model_weights,
+                    weights_file,
                     save_best_only=True,
                     save_weights_only=True,
                 )
             ],
         )
+        with open(output_path / "fit_history.json", "w") as outfile:
+            outfile.write(json.dumps(history.history, indent=4))
+        with open(output_path / "network_config.json", "w") as outfile:
+            outfile.write(
+                json.dumps(
+                    {
+                        "n_inputs": n_inputs,
+                        "n_unet_base": n_unet_base,
+                        "n_features": n_features,
+                        "n_layers": n_layers,
+                        "quantiles": quantiles,
+                        "model_weights": weights_file.as_posix(),
+                    },
+                    indent=4,
+                )
+            )
+
+    def predict(
+        self,
+        input_data: tf.data.Dataset,
+    ) -> tf.data.Dataset:
+        """Apply the trained neural network for a retrieval purpose."""
+        return self.model.predict(input_data)
 
 
 def quantile_loss(

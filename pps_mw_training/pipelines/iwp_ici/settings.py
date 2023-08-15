@@ -8,6 +8,7 @@ ICI_RETRIEVAL_DB_FILE = Path(
         "ICI_RETRIEVAL_DB_FILE", "/tmp/ici_retrieval_database.nc",
     )
 )
+MODEL_CONFIG_PATH = Path(os.environ.get("MODEL_CONFIG_IWP_ICI", "/tmp"))
 
 
 # model parameters
@@ -30,7 +31,6 @@ FIRST_DECAY_STEPS = 1000
 T_MUL = 2.0
 M_MUL = 1.0
 ALPHA = 0.0
-MODEL_CONFIG_PATH = Path("saved_model").resolve()
 INPUT_PARAMS: List[Dict[str, Union[str, float]]] = [
     {
         "name": "DTB_ICI_DB_ICI_01V",

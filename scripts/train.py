@@ -174,7 +174,10 @@ def cli(args_list: list[str] = argv[1:]) -> None:
     add_parser(
         subparsers,
         PipelineType.PR_NORDIC,
-        "Run the Nordic precip training pipeline.",
+        (
+            "Run the Nordic precip training pipeline. "
+            "N.B. this pipeline is not yet fully implemented."
+        ),
         pnt.settings.N_LAYERS,
         pnt.settings.N_FEATURES,
         pnt.settings.BATCH_SIZE,
@@ -182,12 +185,18 @@ def cli(args_list: list[str] = argv[1:]) -> None:
         pnt.settings.TRAIN_FRACTION,
         pnt.settings.VALIDATION_FRACTION,
         pnt.settings.TEST_FRACTION,
-        pnt.settings.MODEL_WEIGHTS,
+        pnt.settings.MODEL_CONFIG_PATH,
     )
     add_parser(
         subparsers,
         PipelineType.IWP_ICI,
-        "Run the IWP ICI training pipeline.",
+        (
+            "Run the pps-mw training app for the training of a single "
+            "quantile regression neural network, handling multiple "
+            "quantiles and retrieval parameters, and missing data, "
+            "to retrieve ice water path and other associated parameters "
+            "from ICI data."
+        ),
         iit.settings.N_HIDDEN_LAYERS,
         iit.settings.N_NEURONS_PER_HIDDEN_LAYER,
         iit.settings.BATCH_SIZE,

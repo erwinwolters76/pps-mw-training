@@ -4,7 +4,6 @@ from pps_mw_training.models.unet_model import UNetModel
 from pps_mw_training.pipelines.pr_nordic import evaluation
 from pps_mw_training.pipelines.pr_nordic import settings
 from pps_mw_training.pipelines.pr_nordic import training_data
-from pps_mw_training.utils.data import prepare_dataset
 
 
 def train(
@@ -15,7 +14,7 @@ def train(
     test_fraction: float,
     batch_size: int,
     n_epochs: int,
-    model_weights: Path,
+    model_config_path: Path,
     only_evaluate: bool,
 ):
     "Run the Nordic precip training pipeline.",
@@ -40,20 +39,7 @@ def train(
             settings.T_MUL,
             settings.M_MUL,
             settings.ALPHA,
-            model_weights,
+            model_config_path,
         )
-    unet_model = UNetModel.load(
-        settings.N_INPUTS,
-        settings.N_OUTPUTS,
-        settings.N_UNET_BASE,
-        n_features,
-        n_layers,
-        model_weights,
-    )
-    test_data = prepare_dataset(
-        test_ds,
-        settings.N_INPUTS,
-        batch_size,
-        augment=False,
-    )
-    evaluation.evaluate_model(unet_model, test_data)
+    unet_model = UNetModel.load(model_config_path / "network_config.json")
+    evaluation.evaluate_model(unet_model, test_ds)

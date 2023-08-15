@@ -36,15 +36,37 @@ The package contains a test suite can be run by tox_:
 Run package scripts
 -------------------
 
-So far the package only contain a single training pipeline,
-and you can run this pipeline as described below:
+So far the package contains two training pipelines,
+and you can run one of the pipeline as described below:
 
 .. code-block:: console
 
   $ train --help
 
-  usage: train.py [-h] [-a ACTIVATION] [-b BATCH_SIZE] [-d DB_FILE] [-e EPOCHS] [-l N_HIDDEN_LAYERS] [-m MISSING_FRACTION] [-n N_NEURONS_PER_HIDDEN_LAYER]
-                  [-o] [-t TRAIN_FRACTION] [-u TEST_FRACTION] [-v VALIDATION_FRACTION] [-w MODEL_CONFIG_PATH]
+  usage: train [-h] {pr_nordic,iwp_ici} ...
+
+  Run the pps-mw-training app.
+
+  positional arguments:
+    {pr_nordic,iwp_ici}
+      pr_nordic          Run the Nordic precip training pipeline.
+      iwp_ici            Run the IWP ICI training pipeline.
+
+  options:
+    -h, --help           show this help message and exit
+
+
+.. raw:: pdf
+
+    PageBreak
+
+
+.. code-block:: console
+
+  $ train iwp_ici --help
+
+  usage: train [-h] [-a ACTIVATION] [-b BATCH_SIZE] [-d DB_FILE] [-e EPOCHS] [-l N_HIDDEN_LAYERS] [-m MISSING_FRACTION] [-n N_NEURONS_PER_HIDDEN_LAYER]
+                 [-o] [-t TRAIN_FRACTION] [-u TEST_FRACTION] [-v VALIDATION_FRACTION] [-w MODEL_CONFIG_PATH]
 
   Run the pps-mw training app for the training of a single quantile regression neural network, handling multiple quantiles and retrieval parameters, and
   missing data, to retrieve ice water path and other associated parameters from ICI data.

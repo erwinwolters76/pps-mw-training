@@ -2,9 +2,7 @@ from pathlib import Path
 import os
 
 
-MODEL_WEIGHTS = Path(
-    os.environ.get("MODEL_WEIGHTS", "/tmp/pretrained_weights.h5")
-)
+MODEL_CONFIG_PATH = Path(os.environ.get("MODEL_CONFIG_PR_NORDIC", "/tmp"))
 # model parameters
 N_INPUTS = 5
 QUANTILES = [0.005, 0.025, 0.165, 0.250, 0.500, 0.750, 0.835, 0.975, 0.995]
@@ -13,8 +11,8 @@ N_UNET_BASE = 16
 N_FEATURES = 128
 N_LAYERS = 4
 # training parameters
-N_EPOCHS = 256
-BATCH_SIZE = 64
+N_EPOCHS = 8
+BATCH_SIZE = 16
 TRAIN_FRACTION = 0.7
 VALIDATION_FRACTION = 0.15
 TEST_FRACTION = 0.15
