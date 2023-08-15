@@ -9,11 +9,13 @@ from tensorflow import keras
 from tensorflow.keras.callbacks import ModelCheckpoint  # type: ignore
 from xarray import Dataset  # type: ignore
 
-from pps_mw_training.scaler import Scaler
+from pps_mw_training.utils.data import set_missing_data
+from pps_mw_training.utils.loss_function import quantile_loss
+from pps_mw_training.utils.scaler import Scaler
 
 
 @dataclass
-class QuantileModel:
+class QrnnModel:
     """Quantile regression neural network model object."""
 
     model: keras.Sequential
@@ -28,8 +30,8 @@ class QuantileModel:
     def load(
         cls,
         model_config_file: Path,
-    ) -> "QuantileModel":
-        """Load model from precalculated weights."""
+    ) -> "QrnnModel":
+        """Load model from config file."""
         with open(model_config_file) as config_file:
             config = json.load(config_file)
         input_params = config["input_parameters"]
@@ -63,7 +65,7 @@ class QuantileModel:
         activation: str,
         quantiles: List[float],
     ) -> keras.Sequential:
-        """Create the quantile model."""
+        """Create the quantile regression neural network model."""
         model = keras.Sequential()
         model.add(keras.Input(shape=(n_input_params,)))
         for _ in range(n_hidden_layers):
@@ -102,7 +104,7 @@ class QuantileModel:
         fill_value: float,
         output_path: Path,
     ) -> None:
-        """Run the training pipeline fro the quantile model."""
+        """Run the training pipeline for the model."""
         input_params = [cast(str, p["name"]) for p in input_parameters]
         output_params = [cast(str, p["name"]) for p in output_parameters]
         n_inputs = len(input_params)
@@ -141,7 +143,10 @@ class QuantileModel:
             ).batch(
                 batch_size=batch_size
             ).map(
-                lambda x, y: (augmentation(x, missing_fraction, fill_value), y)
+                lambda x, y: (
+                    set_missing_data(x, missing_fraction, fill_value),
+                    y,
+                )
             ),
             epochs=epochs,
             verbose=1,
@@ -153,7 +158,10 @@ class QuantileModel:
             ).batch(
                 batch_size=batch_size
             ).map(
-                lambda x, y: (augmentation(x, missing_fraction, fill_value), y)
+                lambda x, y: (
+                    set_missing_data(x, missing_fraction, fill_value),
+                    y,
+                )
             ),
             callbacks=[
                 ModelCheckpoint(
@@ -225,44 +233,3 @@ class QuantileModel:
         prescaled[~np.isfinite(prescaled)] = self.fill_value
         predicted = self.model(prescaled)
         return self.postscale(predicted.numpy())
-
-
-@tf.function
-def augmentation(
-    x: tf.Tensor,
-    missing_fraction: float,
-    fill_value: float,
-) -> tf.Tensor:
-    """Set a fraction of the data to a given fill value."""
-    return tf.where(
-        tf.math.greater(
-            tf.random.uniform(
-                shape=(tf.shape(x)[0], tf.shape(x)[1]),
-                minval=0,
-                maxval=1,
-            ),
-            missing_fraction
-        ),
-        x,
-        fill_value,
-    )
-
-
-def quantile_loss(
-    n_params: int,
-    quantiles: List[float],
-    y_true: tf.Tensor,
-    y_pred: tf.Tensor,
-) -> tf.Tensor:
-    """Quantile loss function handling multiple quantiles and parameters."""
-    s = len(quantiles)
-    q = tf.constant(np.tile(quantiles, n_params), dtype=tf.float32)
-    e = tf.concat(
-        [
-            tf.expand_dims(y_true[:, i], 1) - y_pred[:, i * s: (i + 1) * s]
-            for i in range(n_params)
-        ],
-        axis=1
-    )
-    v = tf.maximum(q * e, (q - 1) * e)
-    return tf.reduce_mean(v)
