@@ -32,3 +32,24 @@ def prepare_dataset(
             num_parallel_calls=AUTOTUNE,
         )
     return ds.prefetch(buffer_size=AUTOTUNE)
+
+
+@tf.function
+def set_missing_data(
+    x: tf.Tensor,
+    missing_fraction: float,
+    fill_value: float,
+) -> tf.Tensor:
+    """Set a fraction of the data to a given fill value."""
+    return tf.where(
+        tf.math.greater(
+            tf.random.uniform(
+                shape=(tf.shape(x)[0], tf.shape(x)[1]),
+                minval=0,
+                maxval=1,
+            ),
+            missing_fraction
+        ),
+        x,
+        fill_value,
+    )

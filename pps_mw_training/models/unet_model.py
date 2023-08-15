@@ -12,6 +12,7 @@ from pps_mw_training.utils.blocks import (
     UpsamplingBlock,
 )
 from pps_mw_training.utils.data import prepare_dataset
+from pps_mw_training.utils.loss_function import quantile_loss
 
 
 class UNetBaseModel(keras.Model):
@@ -119,7 +120,7 @@ class UNetModel:
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
             loss=lambda y_true, y_pred: quantile_loss(
-                quantiles, y_true, y_pred
+                1, quantiles, y_true, y_pred,
             ),
         )
         learning_rate = tf.keras.optimizers.schedules.CosineDecayRestarts(
@@ -170,16 +171,3 @@ class UNetModel:
     ) -> tf.data.Dataset:
         """Apply the trained neural network for a retrieval purpose."""
         return self.model.predict(input_data)
-
-
-def quantile_loss(
-    quantiles: list[float],
-    y_true: tf.Tensor,
-    y_pred: tf.Tensor,
-) -> tf.Tensor:
-    """Quantile loss function handling multiple quantiles and parameters."""
-    q = tf.constant(quantiles)
-    e = y_true - y_pred
-    return tf.reduce_mean(
-        tf.maximum(q * e, (q - 1) * e)
-    )

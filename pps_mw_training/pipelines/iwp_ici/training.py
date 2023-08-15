@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pps_mw_training.models.quantile_model import QuantileModel
+from pps_mw_training.models.qrnn_model import QrnnModel
 from pps_mw_training.pipelines.iwp_ici import evaluation
 from pps_mw_training.pipelines.iwp_ici import settings
 from pps_mw_training.pipelines.iwp_ici import training_data
@@ -30,7 +30,7 @@ def train(
         settings.NOISE,
     )
     if not only_evaluate:
-        QuantileModel.train(
+        QrnnModel.train(
             settings.INPUT_PARAMS,
             settings.OUTPUT_PARAMS,
             n_hidden_layers,
@@ -50,7 +50,7 @@ def train(
             settings.FILL_VALUE,
             model_config_path,
         )
-    model = QuantileModel.load(model_config_path / "network_config.json")
+    model = QrnnModel.load(model_config_path / "network_config.json")
     evaluation.evaluate_model(
         model, test_data, missing_fraction, model_config_path
     )
