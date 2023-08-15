@@ -1,18 +1,12 @@
 import numpy as np  # type: ignore
-
 import tensorflow as tf  # type: ignore
 
 
-AUTOTUNE = tf.data.AUTOTUNE
-IMAGE_SIZE = 128
-
-data_augmentation = tf.keras.Sequential([
-    tf.keras.layers.RandomCrop(IMAGE_SIZE, IMAGE_SIZE),
-    tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-])
-
-
-def get_training_dataset() -> tf.data.Dataset:
+def get_training_dataset(
+    train_fraction: float,
+    validation_fraction: float,
+    test_fraction: float,
+) -> tf.data.Dataset:
     """Get training dataset, experimental code so far."""
     with open('tb1.npy', 'rb') as f:
         tb = np.load(f)
@@ -41,25 +35,3 @@ def get_training_dataset() -> tf.data.Dataset:
             )
         ),
     )
-
-
-def prepare_dataset(
-    ds: tf.data.Dataset,
-    n_channels: int,
-    batch_size: int,
-    augment: bool = False,
-) -> tf.data.Dataset:
-    ds = ds.batch(batch_size)
-    if augment:
-        ds = ds.map(
-            lambda x, y: tf.split(
-                data_augmentation(
-                    tf.concat([x, y], axis=3),
-                    training=True,
-                ),
-                [n_channels, 1],
-                axis=3
-            ),
-            num_parallel_calls=AUTOTUNE,
-        )
-    return ds.prefetch(buffer_size=AUTOTUNE)

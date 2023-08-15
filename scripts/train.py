@@ -1,231 +1,70 @@
 #!/usr/bin/env python
+import argparse
 from pathlib import Path
 from sys import argv
-from typing import Dict, List, Tuple, Union, cast
-import argparse
-import os
+from typing import Optional
 
-from xarray import Dataset  # type: ignore
-
-from pps_mw_training.data import ici
-from pps_mw_training.evaluation.quantile_model_evaluation import evaluate_model
-from pps_mw_training.quantile_model import QuantileModel
-from pps_mw_training.utils import split_dataset, add_noise
+from pps_mw_training.pipelines.iwp_ici import training as iit
+from pps_mw_training.pipelines.pr_nordic import training as pnt
+from pps_mw_training.pipelines.pipeline_type import PipelineType
 
 
-ICI_RETRIEVAL_DB_FILE = Path(
-    os.environ.get(
-        "ICI_RETRIEVAL_DB_FILE", "/tmp/ici_retrieval_database.nc",
-    )
-)
-
-
-# model parameters
-QUANTILES = [0.005, 0.025, 0.165, 0.250, 0.500, 0.750, 0.835, 0.975, 0.995]
-N_HIDDEN_LAYERS = 4
-N_NEURONS_PER_HIDDEN_LAYER = 128
-ACTIVATION = "relu"
-# training parameters
-BATCH_SIZE = 4096
-EPOCHS = 256
-TRAIN_FRACTION = 0.7
-VALIDATION_FRACTION = 0.15
-TEST_FRACTION = 0.15
-NOISE = 1.0
-FILL_VALUE = -2.
-MISSING_FRACTION = 0.1
-# learning rate parameters
-INITIAL_LEARNING_RATE = 0.0001
-FIRST_DECAY_STEPS = 1000
-T_MUL = 2.0
-M_MUL = 1.0
-ALPHA = 0.0
-MODEL_CONFIG_PATH = Path("saved_model").resolve()
-INPUT_PARAMS: List[Dict[str, Union[str, float]]] = [
-    {
-        "name": "DTB_ICI_DB_ICI_01V",
-        "scale": "linear",
-        "min": -170.,
-        "max": 30.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_02V",
-        "scale": "linear",
-        "min": -155.,
-        "max": 35.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_03V",
-        "scale": "linear",
-        "min": -145.,
-        "max": 35.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_04V",
-        "scale": "linear",
-        "min": -195.,
-        "max": 40.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_04H",
-        "scale": "linear",
-        "min": -195.,
-        "max": 50.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_05V",
-        "scale": "linear",
-        "min": -185.,
-        "max": 30.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_06V",
-        "scale": "linear",
-        "min": -180.,
-        "max": 30.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_07V",
-        "scale": "linear",
-        "min": -165.,
-        "max": 35.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_08V",
-        "scale": "linear",
-        "min": -165.,
-        "max": 35.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_09V",
-        "scale": "linear",
-        "min": -155.,
-        "max": 35.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_10V",
-        "scale": "linear",
-        "min": -135.,
-        "max": 25.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_11V",
-        "scale": "linear",
-        "min": -160.,
-        "max": 30.,
-    },
-    {
-        "name": "DTB_ICI_DB_ICI_11H",
-        "scale": "linear",
-        "min": -160.,
-        "max": 30.,
-    },
-    {
-        "name": "SurfType",
-        "scale": "linear",
-        "min": 0.,
-        "max": 4.,
-    },
-    {
-        "name": "SurfPres",
-        "scale": "linear",
-        "min": 50000.,
-        "max": 106000.,
-    },
-    {
-        "name": "SurfTemp",
-        "scale": "linear",
-        "min": 210.,
-        "max": 320.,
-    },
-    {
-        "name": "SurfWind",
-        "scale": "linear",
-        "min": 0.,
-        "max": 35.,
-    }
-]
-OUTPUT_PARAMS: List[Dict[str, Union[str, float]]] = [
-    {
-        "name": "TCWV",
-        "scale": "log",
-        "min": 0.,
-        "max": 80.,
-    },
-    {
-        "name": "LWP",
-        "scale": "log",
-        "min": 0.,
-        "max": 2.,
-    },
-    {
-        "name": "RWP",
-        "scale": "log",
-        "min": 0.,
-        "max": 4.,
-    },
-    {
-        "name": "IWP",
-        "scale": "log",
-        "min": 0.,
-        "max": 35.,
-    },
-    {
-        "name": "Zmean",
-        "scale": "linear",
-        "min": 0.,
-        "max": 19000.,
-    },
-    {
-        "name": "Dmean",
-        "scale": "linear",
-        "min": 0.,
-        "max": 0.0017,
-    }
-]
-
-
-def get_training_data(
-    ici_db_file: Path,
+def add_parser(
+    subparsers: argparse._SubParsersAction,
+    pipeline_type: PipelineType,
+    description: str,
+    n_hidden_layers: int,
+    n_neurons_per_hidden_layer: int,
+    batchsize: int,
+    n_epochs: int,
     train_fraction: float,
     validation_fraction: float,
     test_fraction: float,
-) -> Tuple[Dataset, Dataset, Dataset]:
-    """Get training data."""
-    full_dataset = ici.load_retrieval_database(ici_db_file)
-    params = [cast(str, p["name"]) for p in INPUT_PARAMS]
-    full_dataset = add_noise(
-        full_dataset,
-        params=[p for p in params if p.startswith("DTB")],
-        sigma=NOISE,
+    model_config_path: Path,
+    missing_fraction: Optional[float] = None,
+    activation: Optional[str] = None,
+    db_file: Optional[Path] = None,
+):
+    """Add parser and set default values."""
+    parser = subparsers.add_parser(
+        pipeline_type.value,
+        description=description,
+        help=description,
     )
-    return split_dataset(
-        full_dataset,
-        train_fraction,
-        validation_fraction,
-        test_fraction,
-    )
-
-
-def cli(args_list: List[str] = argv[1:]) -> None:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Run the pps-mw training app for the training of a single quantile "
-            "regression neural network, handling multiple quantiles and "
-            "retrieval parameters, and missing data, to retrieve ice water "
-            "path and other associated parameters from ICI data."
+    if activation is not None:
+        parser.add_argument(
+            "-a",
+            "--activation",
+            dest="activation",
+            type=str,
+            help=(
+                "Activation function to use for the hidden layers, "
+                f"default is {activation}"
+            ),
+            default=activation,
         )
-    )
+    if db_file is not None:
+        parser.add_argument(
+            "-d",
+            "--db-file",
+            dest="db_file",
+            type=str,
+            help=(
+                "Path to ICI retrieval database file to use as training data, "
+                f"default is {db_file.as_posix()}"
+            ),
+            default=db_file.as_posix(),
+        )
     parser.add_argument(
-        "-a",
-        "--activation",
-        dest="activation",
-        type=str,
+        "-l",
+        "--layers",
+        dest="n_hidden_layers",
+        type=int,
         help=(
-            "Activation function to use for the hidden layers, "
-            f"default is {ACTIVATION}"
+            "Number of hidden layers, "
+            f"default is {n_hidden_layers}"
         ),
-        default=ACTIVATION,
+        default=n_hidden_layers,
     )
     parser.add_argument(
         "-b",
@@ -234,56 +73,34 @@ def cli(args_list: List[str] = argv[1:]) -> None:
         type=int,
         help=(
             "Training batch size, "
-            f"default is {BATCH_SIZE}"
+            f"default is {batchsize}"
         ),
-        default=BATCH_SIZE,
-    )
-    parser.add_argument(
-        "-d",
-        "--db-file",
-        dest="db_file",
-        type=str,
-        help=(
-            "Path to ICI retrieval database file to use as training data, "
-            f"default is {ICI_RETRIEVAL_DB_FILE}"
-        ),
-        default=ICI_RETRIEVAL_DB_FILE,
+        default=batchsize,
     )
     parser.add_argument(
         "-e",
         "--epochs",
-        dest="epochs",
+        dest="n_epochs",
         type=int,
         help=(
             "Number of training epochs, "
-            f"default is {EPOCHS}"
+            f"default is {n_epochs}"
         ),
-        default=EPOCHS,
+        default=n_epochs,
     )
-    parser.add_argument(
-        "-l",
-        "--layers",
-        dest="n_hidden_layers",
-        type=int,
-        help=(
-            "Number of hidden layers, "
-            f"default is {N_HIDDEN_LAYERS}"
-        ),
-        default=N_HIDDEN_LAYERS,
-    )
-    parser.add_argument(
-        "-m",
-        "--missing-fraction",
-        dest="missing_fraction",
-        type=float,
-        help=(
-            "Set this fraction of observations to a fill value, "
-            "in order to allow for the network to learn to handle "
-            "missing data, "
-            f"default is {MISSING_FRACTION}"
-        ),
-        default=MISSING_FRACTION,
-    )
+    if missing_fraction is not None:
+        parser.add_argument(
+            "-m",
+            "--missing-fraction",
+            dest="missing_fraction",
+            type=float,
+            help=(
+                "Set this fraction of observations to a fill value, "
+                "in order to allow for the network to learn to handle "
+                f"missing data, default is {missing_fraction}"
+            ),
+            default=missing_fraction,
+        )
     parser.add_argument(
         "-n",
         "--neurons",
@@ -291,9 +108,9 @@ def cli(args_list: List[str] = argv[1:]) -> None:
         type=int,
         help=(
             "Number of hidden layers, "
-            f"default is {N_NEURONS_PER_HIDDEN_LAYER}"
+            f"default is {n_neurons_per_hidden_layer}"
         ),
-        default=N_NEURONS_PER_HIDDEN_LAYER,
+        default=n_neurons_per_hidden_layer,
     )
     parser.add_argument(
         "-o",
@@ -309,9 +126,9 @@ def cli(args_list: List[str] = argv[1:]) -> None:
         type=float,
         help=(
             "Fraction of the training dataset to use as training data, "
-            f"default is {TRAIN_FRACTION}"
+            f"default is {train_fraction}"
         ),
-        default=TRAIN_FRACTION,
+        default=train_fraction,
     )
     parser.add_argument(
         "-u",
@@ -320,9 +137,9 @@ def cli(args_list: List[str] = argv[1:]) -> None:
         type=float,
         help=(
             "Fraction of the training dataset to use as test data, "
-            f"default is {TEST_FRACTION}"
+            f"default is {test_fraction}"
         ),
-        default=TEST_FRACTION,
+        default=test_fraction,
     )
     parser.add_argument(
         "-v",
@@ -331,9 +148,9 @@ def cli(args_list: List[str] = argv[1:]) -> None:
         type=float,
         help=(
             "Fraction of the training dataset to use as validation data, "
-            f"default is {VALIDATION_FRACTION}"
+            f"default is {validation_fraction}"
         ),
-        default=VALIDATION_FRACTION,
+        default=validation_fraction,
     )
     parser.add_argument(
         "-w",
@@ -343,52 +160,75 @@ def cli(args_list: List[str] = argv[1:]) -> None:
         help=(
             "Path to use for saving the trained model config, "
             "or to read from for an evaluation purpose, "
-            f"default is {MODEL_CONFIG_PATH}"
+            f"default is {model_config_path.as_posix()}"
         ),
-        default=MODEL_CONFIG_PATH,
+        default=model_config_path.as_posix(),
+    )
+
+
+def cli(args_list: list[str] = argv[1:]) -> None:
+    parser = argparse.ArgumentParser(
+        description="""Run the pps-mw-training app."""
+    )
+    subparsers = parser.add_subparsers(dest='pipeline_type')
+    add_parser(
+        subparsers,
+        PipelineType.PR_NORDIC,
+        "Run the Nordic precip training pipeline.",
+        pnt.settings.N_LAYERS,
+        pnt.settings.N_FEATURES,
+        pnt.settings.BATCH_SIZE,
+        pnt.settings.N_EPOCHS,
+        pnt.settings.TRAIN_FRACTION,
+        pnt.settings.VALIDATION_FRACTION,
+        pnt.settings.TEST_FRACTION,
+        pnt.settings.MODEL_WEIGHTS,
+    )
+    add_parser(
+        subparsers,
+        PipelineType.IWP_ICI,
+        "Run the IWP ICI training pipeline.",
+        iit.settings.N_HIDDEN_LAYERS,
+        iit.settings.N_NEURONS_PER_HIDDEN_LAYER,
+        iit.settings.BATCH_SIZE,
+        iit.settings.N_EPOCHS,
+        iit.settings.TRAIN_FRACTION,
+        iit.settings.VALIDATION_FRACTION,
+        iit.settings.TEST_FRACTION,
+        iit.settings.MODEL_CONFIG_PATH,
+        activation=iit.settings.ACTIVATION,
+        missing_fraction=iit.settings.MISSING_FRACTION,
+        db_file=iit.settings.ICI_RETRIEVAL_DB_FILE,
     )
     args = parser.parse_args(args_list)
-    db_file = Path(args.db_file)
-    train_fraction = args.train_fraction
-    validation_fraction = args.validation_fraction
-    test_fraction = args.test_fraction
-    epochs = args.epochs
-    batch_size = args.batch_size
-    n_hidden_layers = args.n_hidden_layers
-    n_neurons_per_hidden_layer = args.n_neurons_per_hidden_layer
-    activation = args.activation
-    missing_fraction = args.missing_fraction
-    run_training = not args.only_evaluate
-    model_config_path = Path(args.model_config_path).resolve()
-    training_data, test_data, validation_data = get_training_data(
-        db_file,
-        train_fraction,
-        validation_fraction,
-        test_fraction,
-    )
-    if run_training:
-        QuantileModel.train(
-            INPUT_PARAMS,
-            OUTPUT_PARAMS,
-            n_hidden_layers,
-            n_neurons_per_hidden_layer,
-            activation,
-            QUANTILES,
-            training_data,
-            validation_data,
-            batch_size,
-            epochs,
-            INITIAL_LEARNING_RATE,
-            FIRST_DECAY_STEPS,
-            T_MUL,
-            M_MUL,
-            ALPHA,
-            missing_fraction,
-            FILL_VALUE,
-            model_config_path,
+    pipeline_type = PipelineType(args.pipeline_type)
+    if pipeline_type is PipelineType.PR_NORDIC:
+        pnt.train(
+            args.n_hidden_layers,
+            args.n_neurons_per_hidden_layer,
+            args.train_fraction,
+            args.validation_fraction,
+            args.test_fraction,
+            args.batch_size,
+            args.n_epochs,
+            Path(args.model_config_path),
+            args.only_evaluate,
         )
-    model = QuantileModel.load(model_config_path / "network_config.json")
-    evaluate_model(model, test_data, missing_fraction, model_config_path)
+    else:
+        iit.train(
+            args.n_hidden_layers,
+            args.n_neurons_per_hidden_layer,
+            args.activation,
+            Path(args.db_file),
+            args.train_fraction,
+            args.validation_fraction,
+            args.test_fraction,
+            args.batch_size,
+            args.n_epochs,
+            args.missing_fraction,
+            Path(args.model_config_path),
+            args.only_evaluate,
+        )
 
 
 if __name__ == "__main__":

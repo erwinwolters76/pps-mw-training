@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt  # type: ignore
 import tensorflow as tf  # type: ignore
 from tensorflow import keras
 
-from pps_mw_training.unet_model import UNetModel
+from pps_mw_training.models.unet_model import UNetModel
 
 
 def evaluate_model(

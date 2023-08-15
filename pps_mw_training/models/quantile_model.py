@@ -9,7 +9,7 @@ from tensorflow import keras
 from tensorflow.keras.callbacks import ModelCheckpoint  # type: ignore
 from xarray import Dataset  # type: ignore
 
-from pps_mw_training.scaler import Scaler
+from pps_mw_training.utils.scaler import Scaler
 
 
 @dataclass
@@ -102,7 +102,7 @@ class QuantileModel:
         fill_value: float,
         output_path: Path,
     ) -> None:
-        """Run the training pipeline fro the quantile model."""
+        """Run the training pipeline for the quantile model."""
         input_params = [cast(str, p["name"]) for p in input_parameters]
         output_params = [cast(str, p["name"]) for p in output_parameters]
         n_inputs = len(input_params)

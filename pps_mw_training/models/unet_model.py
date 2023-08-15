@@ -4,12 +4,13 @@ from pathlib import Path
 import tensorflow as tf  # type: ignore
 from tensorflow import keras
 
-from pps_mw_training.blocks import (
+from pps_mw_training.utils.blocks import (
     ConvolutionBlock,
     DownsamplingBlock,
     MLP,
     UpsamplingBlock,
 )
+from pps_mw_training.utils.data import prepare_dataset
 
 
 class UNetBaseModel(keras.Model):
@@ -89,25 +90,50 @@ class UNetModel:
         quantiles: list[float],
         training_data: tf.data.Dataset,
         validation_data: tf.data.Dataset,
+        batch_size: int,
         n_epochs: int,
+        initial_learning_rate: float,
+        first_decay_steps: int,
+        t_mul: float,
+        m_mul: float,
+        alpha: float,
         model_weights: Path,
     ) -> None:
+        """Train the model."""
         n_outputs = len(quantiles)
         model = UNetBaseModel(
             n_inputs, n_outputs, n_unet_base, n_features, n_layers,
         )
         model.build((None, None, None, n_inputs))
+        learning_rate = tf.keras.optimizers.schedules.CosineDecayRestarts(
+            initial_learning_rate=initial_learning_rate,
+            first_decay_steps=first_decay_steps,
+            t_mul=t_mul,
+            m_mul=m_mul,
+            alpha=alpha,
+        )
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
             loss=lambda y_true, y_pred: quantile_loss(
                 quantiles, y_true, y_pred
             ),
         )
-        model.summary()
+        learning_rate = tf.keras.optimizers.schedules.CosineDecayRestarts(
+            initial_learning_rate=initial_learning_rate,
+            first_decay_steps=first_decay_steps,
+            t_mul=t_mul,
+            m_mul=m_mul,
+            alpha=alpha,
+        )
         model.fit(
-            training_data,
+            prepare_dataset(training_data, n_inputs, batch_size, augment=True),
             epochs=n_epochs,
-            validation_data=validation_data,
+            validation_data=prepare_dataset(
+                validation_data,
+                n_inputs,
+                batch_size,
+                augment=True,
+            ),
             callbacks=[
                 keras.callbacks.ModelCheckpoint(
                     model_weights,
