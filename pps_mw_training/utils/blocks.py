@@ -10,12 +10,6 @@ class ConvolutionBlock(layers.Layer):
     """
 
     def __init__(self, channels_in: int, channels_out: int):
-        """
-        Create new convolution block.
-        Args:
-            channels_in: The number of input channels.
-            channels_out: The number of output channels.
-        """
         super().__init__()
         self.block = keras.Sequential()
         self.block.add(SymmetricPadding(1))
@@ -27,9 +21,11 @@ class ConvolutionBlock(layers.Layer):
                 input_shape=(None, None, channels_in),
             )
         )
+        self.block.add(layers.BatchNormalization())
         self.block.add(layers.ReLU())
         self.block.add(SymmetricPadding(1))
         self.block.add(layers.Conv2D(channels_out, 3, padding="valid"))
+        self.block.add(layers.BatchNormalization())
         self.block.add(layers.ReLU())
 
     def call(self, input):
@@ -44,12 +40,6 @@ class DownsamplingBlock(keras.Sequential):
     """
 
     def __init__(self, channels_in: int, channels_out: int):
-        """
-        Create new convolution block.
-        Args:
-            channels_in: The number of input channels.
-            channels_out: The number of output channels.
-        """
         super().__init__()
         self.add(layers.MaxPooling2D(strides=(2, 2)))
         self.add(ConvolutionBlock(channels_in, channels_out))
@@ -64,12 +54,6 @@ class UpsamplingBlock(layers.Layer):
     """
 
     def __init__(self, channels_in: int, channels_out: int):
-        """
-        Create new convolution block.
-        Args:
-            channels_in: The number of input channels.
-            channels_out: The number of output channels.
-        """
         super().__init__()
         self.upsample = layers.UpSampling2D(
             size=(2, 2),
@@ -90,9 +74,7 @@ class UpsamplingBlock(layers.Layer):
 
 
 class MLP(keras.Sequential):
-    """
-    A multi layer perceptron block.
-    """
+    """A multi layer perceptron block."""
 
     def __init__(
         self,
@@ -100,9 +82,6 @@ class MLP(keras.Sequential):
         n_features: int = 128,
         n_layers: int = 4,
     ):
-        """
-        Create a multi layer perceptron block.
-        """
         super().__init__()
         for _ in range(n_layers - 1):
             self.add(

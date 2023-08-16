@@ -2,7 +2,7 @@ import tensorflow as tf  # type: ignore
 
 
 AUTOTUNE = tf.data.AUTOTUNE
-IMAGE_SIZE = 128
+IMAGE_SIZE = 64  # 128
 
 
 data_augmentation = tf.keras.Sequential([

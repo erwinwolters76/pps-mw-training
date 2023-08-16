@@ -24,11 +24,10 @@ def train(
         train_fraction,
         validation_fraction,
         test_fraction,
-        settings.CHANNELS,
     )
     if not only_evaluate:
         UNetModel.train(
-            len(settings.CHANNELS),
+            settings.INPUT_PARAMS,
             settings.N_UNET_BASE,
             n_features,
             n_layers,
@@ -42,7 +41,8 @@ def train(
             settings.T_MUL,
             settings.M_MUL,
             settings.ALPHA,
+            settings.FILL_VALUE,
             model_config_path,
         )
     unet_model = UNetModel.load(model_config_path / "network_config.json")
-    evaluation.evaluate_model(unet_model, test_ds)
+    evaluation.evaluate_model(unet_model, test_ds[0], test_ds[1])

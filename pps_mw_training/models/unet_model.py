@@ -1,9 +1,12 @@
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 import json
 
+import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 from tensorflow import keras
+from xarray import Dataset, DataArray  # type: ignore
 
 from pps_mw_training.utils.blocks import (
     ConvolutionBlock,
@@ -13,6 +16,7 @@ from pps_mw_training.utils.blocks import (
 )
 from pps_mw_training.utils.data import prepare_dataset
 from pps_mw_training.utils.loss_function import quantile_loss
+from pps_mw_training.utils.scaler import Scaler
 
 
 class UNetBaseModel(keras.Model):
@@ -64,6 +68,9 @@ class UNetBaseModel(keras.Model):
 class UNetModel:
     """Unet model object."""
     model: UNetBaseModel
+    pre_scaler: Scaler
+    input_params: list[dict[str, Any]]
+    fill_value: float
 
     @classmethod
     def load(
@@ -73,7 +80,8 @@ class UNetModel:
         """Load the model from config file."""
         with open(model_config_file) as config_file:
             config = json.load(config_file)
-        n_inputs = config["n_inputs"]
+        input_parameters = config["input_parameters"]
+        n_inputs = len(input_parameters)
         n_outputs = len(config["quantiles"])
         model = UNetBaseModel(
             n_inputs,
@@ -84,17 +92,23 @@ class UNetModel:
         )
         model.build((None, None, None, n_inputs))
         model.load_weights(config["model_weights"])
-        return cls(model)
+        return cls(
+            model,
+            Scaler.from_dict(input_parameters),
+            input_parameters,
+            config["fill_value"],
+        )
 
-    @staticmethod
+    @classmethod
     def train(
-        n_inputs: int,
+        cls,
+        input_parameters: list[dict[str, Any]],
         n_unet_base: int,
         n_features: int,
         n_layers: int,
         quantiles: list[float],
-        training_data: tf.data.Dataset,
-        validation_data: tf.data.Dataset,
+        training_data: tuple[Dataset, DataArray],
+        validation_data: tuple[Dataset, DataArray],
         batch_size: int,
         n_epochs: int,
         initial_learning_rate: float,
@@ -102,9 +116,11 @@ class UNetModel:
         t_mul: float,
         m_mul: float,
         alpha: float,
+        fill_value: float,
         output_path: Path,
     ) -> None:
         """Train the model."""
+        n_inputs = len(input_parameters)
         n_outputs = len(quantiles)
         model = UNetBaseModel(
             n_inputs, n_outputs, n_unet_base, n_features, n_layers,
@@ -130,12 +146,38 @@ class UNetModel:
             m_mul=m_mul,
             alpha=alpha,
         )
+        input_scaler = Scaler.from_dict(input_parameters)
+        train_samples = cls.prescale(
+            training_data[0],
+            input_scaler,
+            input_parameters,
+            fill_value,
+        )
+        train_labels = np.expand_dims(training_data[1].values, axis=3)
+        train_labels[~np.isfinite(train_labels)] = fill_value
+        val_samples = cls.prescale(
+            validation_data[0],
+            input_scaler,
+            input_parameters,
+            fill_value,
+        )
+        val_labels = np.expand_dims(validation_data[1].values, axis=3)
+        val_labels[~np.isfinite(val_labels)] = fill_value
         weights_file = output_path / "weights.h5"
         history = model.fit(
-            prepare_dataset(training_data, n_inputs, batch_size, augment=True),
+            prepare_dataset(
+                tf.data.Dataset.from_tensor_slices(
+                    (train_samples, train_labels)
+                ),
+                n_inputs,
+                batch_size,
+                augment=True,
+            ),
             epochs=n_epochs,
             validation_data=prepare_dataset(
-                validation_data,
+                tf.data.Dataset.from_tensor_slices(
+                    (val_samples, val_labels)
+                ),
                 n_inputs,
                 batch_size,
                 augment=True,
@@ -154,20 +196,44 @@ class UNetModel:
             outfile.write(
                 json.dumps(
                     {
-                        "n_inputs": n_inputs,
+                        "input_parameters": input_parameters,
                         "n_unet_base": n_unet_base,
                         "n_features": n_features,
                         "n_layers": n_layers,
                         "quantiles": quantiles,
+                        "fill_value": fill_value,
                         "model_weights": weights_file.as_posix(),
                     },
                     indent=4,
                 )
             )
 
+    @staticmethod
+    def prescale(
+        data: Dataset,
+        pre_scaler: Scaler,
+        input_params: list[dict[str, Any]],
+        fill_value: float,
+    ) -> np.ndarray:
+        """Prescale data."""
+        data = np.stack(
+            [
+                pre_scaler.apply(
+                    data[p["band"]][:, :, :, p["index"]].values,
+                    idx,
+                ) for idx, p in enumerate(input_params)
+            ],
+            axis=3,
+        )
+        data[~np.isfinite(data)] = fill_value
+        return data
+
     def predict(
         self,
-        input_data: tf.data.Dataset,
-    ) -> tf.data.Dataset:
+        input_data: Dataset,
+    ) -> np.ndarray:
         """Apply the trained neural network for a retrieval purpose."""
-        return self.model.predict(input_data)
+        prescaled = self.prescale(
+            input_data, self.pre_scaler, self.input_params, self.fill_value
+        )
+        return self.model(prescaled).numpy()
