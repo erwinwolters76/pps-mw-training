@@ -6,8 +6,10 @@ channels:
 
 dependencies:
   - python=3.10
+  - graphviz
   - matplotlib
   - netcdf4
   - numpy
+  - pydot
   - tensorflow
   - xarray
