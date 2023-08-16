@@ -14,7 +14,7 @@ from pps_mw_training.utils.blocks import (
     MLP,
     UpsamplingBlock,
 )
-from pps_mw_training.utils.data import prepare_dataset
+from pps_mw_training.utils.data import random_crop_and_flip
 from pps_mw_training.utils.loss_function import quantile_loss
 from pps_mw_training.utils.scaler import Scaler
 
@@ -111,12 +111,13 @@ class UNetModel:
         validation_data: tuple[Dataset, DataArray],
         batch_size: int,
         n_epochs: int,
+        fill_value: float,
+        image_size: int,
         initial_learning_rate: float,
         first_decay_steps: int,
         t_mul: float,
         m_mul: float,
         alpha: float,
-        fill_value: float,
         output_path: Path,
     ) -> None:
         """Train the model."""
@@ -139,48 +140,22 @@ class UNetModel:
                 1, quantiles, y_true, y_pred,
             ),
         )
-        learning_rate = tf.keras.optimizers.schedules.CosineDecayRestarts(
-            initial_learning_rate=initial_learning_rate,
-            first_decay_steps=first_decay_steps,
-            t_mul=t_mul,
-            m_mul=m_mul,
-            alpha=alpha,
-        )
-        input_scaler = Scaler.from_dict(input_parameters)
-        train_samples = cls.prescale(
-            training_data[0],
-            input_scaler,
-            input_parameters,
-            fill_value,
-        )
-        train_labels = np.expand_dims(training_data[1].values, axis=3)
-        train_labels[~np.isfinite(train_labels)] = fill_value
-        val_samples = cls.prescale(
-            validation_data[0],
-            input_scaler,
-            input_parameters,
-            fill_value,
-        )
-        val_labels = np.expand_dims(validation_data[1].values, axis=3)
-        val_labels[~np.isfinite(val_labels)] = fill_value
         weights_file = output_path / "weights.h5"
         history = model.fit(
-            prepare_dataset(
-                tf.data.Dataset.from_tensor_slices(
-                    (train_samples, train_labels)
-                ),
-                n_inputs,
+            cls.prepare_dataset(
+                input_parameters,
+                training_data,
                 batch_size,
-                augment=True,
+                image_size,
+                fill_value,
             ),
             epochs=n_epochs,
-            validation_data=prepare_dataset(
-                tf.data.Dataset.from_tensor_slices(
-                    (val_samples, val_labels)
-                ),
-                n_inputs,
+            validation_data=cls.prepare_dataset(
+                input_parameters,
+                validation_data,
                 batch_size,
-                augment=True,
+                image_size,
+                fill_value,
             ),
             callbacks=[
                 keras.callbacks.ModelCheckpoint(
@@ -207,6 +182,27 @@ class UNetModel:
                     indent=4,
                 )
             )
+
+    @classmethod
+    def prepare_dataset(
+        cls,
+        input_parameters: list[dict[str, Any]],
+        training_data: tuple[Dataset, DataArray],
+        batch_size: int,
+        image_size: int,
+        fill_value: float,
+    ) -> tf.data.Dataset:
+        """Prepare dataset for training."""
+        input_scaler = Scaler.from_dict(input_parameters)
+        images = cls.prescale(
+            training_data[0],
+            input_scaler,
+            input_parameters,
+            fill_value,
+        )
+        labels = np.expand_dims(training_data[1].values, axis=3)
+        labels[~np.isfinite(labels)] = fill_value
+        return random_crop_and_flip(images, labels, image_size, batch_size)
 
     @staticmethod
     def prescale(
