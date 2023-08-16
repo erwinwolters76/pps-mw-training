@@ -36,12 +36,13 @@ def train(
             val_ds,
             batch_size,
             n_epochs,
+            settings.FILL_VALUE,
+            settings.IMAGE_SIZE,
             settings.INITIAL_LEARNING_RATE,
             settings.FIRST_DECAY_STEPS,
             settings.T_MUL,
             settings.M_MUL,
             settings.ALPHA,
-            settings.FILL_VALUE,
             model_config_path,
         )
     unet_model = UNetModel.load(model_config_path / "network_config.json")
