@@ -16,7 +16,10 @@ from pps_mw_training.utils.scaler import Scaler
 
 @dataclass
 class QrnnModel:
-    """Quantile regression neural network model object."""
+    """
+    Object for handling training, loading, and predictions of a
+    quantile regression neural network model.
+    """
 
     model: keras.Sequential
     pre_scaler: Scaler
@@ -105,10 +108,8 @@ class QrnnModel:
         output_path: Path,
     ) -> None:
         """Run the training pipeline for the model."""
-        input_params = [cast(str, p["name"]) for p in input_parameters]
-        output_params = [cast(str, p["name"]) for p in output_parameters]
-        n_inputs = len(input_params)
-        n_outputs = len(output_params)
+        n_inputs = len(input_parameters)
+        n_outputs = len(output_parameters)
         model = cls.create(
             n_inputs,
             n_outputs,
@@ -130,38 +131,25 @@ class QrnnModel:
                 n_outputs, quantiles, y_true, y_pred
             ),
         )
-        input_scaler = Scaler.from_dict(input_parameters)
-        output_scaler = Scaler.from_dict(output_parameters)
         output_path.mkdir(parents=True, exist_ok=True)
         weights_file = output_path / "weights.h5"
         history = model.fit(
-            tf.data.Dataset.from_tensor_slices(
-                (
-                    cls.prescale(training_data, input_scaler, input_params),
-                    cls.prescale(training_data, output_scaler, output_params),
-                )
-            ).batch(
-                batch_size=batch_size
-            ).map(
-                lambda x, y: (
-                    set_missing_data(x, missing_fraction, fill_value),
-                    y,
-                )
+            cls.prepare_data(
+                input_parameters,
+                output_parameters,
+                training_data,
+                batch_size,
+                missing_fraction,
+                fill_value,
             ),
             epochs=epochs,
-            verbose=1,
-            validation_data=tf.data.Dataset.from_tensor_slices(
-                (
-                    cls.prescale(validation_data, input_scaler, input_params),
-                    cls.prescale(validation_data, output_scaler, output_params),
-                )
-            ).batch(
-                batch_size=batch_size
-            ).map(
-                lambda x, y: (
-                    set_missing_data(x, missing_fraction, fill_value),
-                    y,
-                )
+            validation_data=cls.prepare_data(
+                input_parameters,
+                output_parameters,
+                validation_data,
+                batch_size,
+                missing_fraction,
+                fill_value,
             ),
             callbacks=[
                 ModelCheckpoint(
@@ -189,6 +177,32 @@ class QrnnModel:
                     indent=4,
                 )
             )
+
+    @classmethod
+    def prepare_data(
+        cls,
+        input_parameters: list[dict[str, Any]],
+        output_parameters: List[Dict[str, Any]],
+        training_data: Dataset,
+        batch_size: int,
+        missing_fraction: float,
+        fill_value: float,
+    ) -> tf.data.Dataset:
+        """Prepare data for training."""
+        input_scaler = Scaler.from_dict(input_parameters)
+        output_scaler = Scaler.from_dict(output_parameters)
+        input_params = [cast(str, p["name"]) for p in input_parameters]
+        output_params = [cast(str, p["name"]) for p in output_parameters]
+        return tf.data.Dataset.from_tensor_slices(
+            (
+                cls.prescale(training_data, input_scaler, input_params),
+                cls.prescale(training_data, output_scaler, output_params),
+            )
+        ).batch(
+            batch_size=batch_size
+        ).map(
+            lambda x, y: (set_missing_data(x, missing_fraction, fill_value), y)
+        )
 
     @staticmethod
     def prescale(

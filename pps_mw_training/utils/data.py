@@ -11,7 +11,7 @@ def random_crop_and_flip(
     image_size: int,
     batch_size: int,
 ) -> tf.data.Dataset:
-    """Apply random crop and flip."""
+    """Create a tf dataset and apply random crop and flip when fetching data."""
     ds = tf.data.Dataset.from_tensor_slices((images, labels))
     augmentation = tf.keras.Sequential([
         tf.keras.layers.RandomCrop(image_size, image_size),

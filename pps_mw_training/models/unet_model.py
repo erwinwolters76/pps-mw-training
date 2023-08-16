@@ -20,11 +20,7 @@ from pps_mw_training.utils.scaler import Scaler
 
 
 class UNetBaseModel(keras.Model):
-    """
-    Keras implementation of the UNet architecture, an input block followed
-    by 4 encoder blocks and 4 decoder blocks, and finishing with a
-    multi layer perceptron block.
-    """
+    """U-Net convolutinal neural network object."""
 
     def __init__(
         self,
@@ -66,7 +62,10 @@ class UNetBaseModel(keras.Model):
 
 @dataclass
 class UNetModel:
-    """Unet model object."""
+    """
+    Object for handling training, loading, and predictions of a
+    quantile regression U-Net convolutional neural network model.
+    """
     model: UNetBaseModel
     pre_scaler: Scaler
     input_params: list[dict[str, Any]]
@@ -140,6 +139,7 @@ class UNetModel:
                 1, quantiles, y_true, y_pred,
             ),
         )
+        output_path.mkdir(parents=True, exist_ok=True)
         weights_file = output_path / "weights.h5"
         history = model.fit(
             cls.prepare_dataset(
