@@ -70,7 +70,7 @@ MIN_QUALITY = 0.8  # radar quality index between 0 (poor) and 1 (good)
 MAX_DISTANCE = 200e3  # max distance [m] from radar
 # training parameters
 N_EPOCHS = 128
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 TRAIN_FRACTION = 0.7
 VALIDATION_FRACTION = 0.15
 TEST_FRACTION = 0.15
