@@ -7,12 +7,14 @@ def quantile_loss(
     quantiles: list[float],
     y_true: tf.Tensor,
     y_pred: tf.Tensor,
+    fill_value: float = -100.0,
 ) -> tf.Tensor:
     """Quantile loss function handling multiple quantiles and parameters."""
     s = len(quantiles)
     q = tf.constant(np.tile(quantiles, n_params), dtype=tf.float32)
     if n_params == 1:
         e = y_true - y_pred
+        e = tf.where(y_true == fill_value, 0., e)
     else:
         e = tf.concat(
             [

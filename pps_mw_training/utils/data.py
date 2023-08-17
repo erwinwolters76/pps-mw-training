@@ -1,36 +1,65 @@
-import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 
 
-AUTOTUNE = tf.data.AUTOTUNE
-
-
+@tf.function
 def random_crop_and_flip(
-    images: np.ndarray,
-    labels: np.ndarray,
+    x: tf.Tensor,
+    y: tf.Tensor,
     image_size: int,
-    batch_size: int,
-) -> tf.data.Dataset:
-    """Create a tf dataset and apply random crop and flip when fetching data."""
-    ds = tf.data.Dataset.from_tensor_slices((images, labels))
-    augmentation = tf.keras.Sequential([
-        tf.keras.layers.RandomCrop(image_size, image_size),
-        tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-    ])
-    ds = ds.batch(batch_size)
-    axis = 3
-    ds = ds.map(
-        lambda x, y: tf.split(
-            augmentation(
-                tf.concat([x, y], axis=axis),
-                training=True,
-            ),
-            [images.shape[axis], 1],
-            axis=axis,
-        ),
-        num_parallel_calls=AUTOTUNE,
+) -> tuple[tf.Tensor, tf.Tensor]:
+    """Apply random crop and flip."""
+    x, y = random_crop(x, y, image_size)
+    x, y = random_flip(x, y)
+    return x, y
+
+
+@tf.function
+def random_flip(
+    x: tf.Tensor,
+    y: tf.Tensor,
+) -> tuple[tf.Tensor, tf.Tensor]:
+    """Random flip of data."""
+    horizontal_flip = tf.random.uniform(()) > 0.5
+    vertical_flip = tf.random.uniform(()) > 0.5
+    if horizontal_flip:
+        x = tf.reverse(x, [2])
+        y = tf.reverse(y, [2])
+    if vertical_flip:
+        x = tf.reverse(x, [1])
+        y = tf.reverse(y, [1])
+    return x, y
+
+
+@tf.function
+def random_crop(
+    x: tf.Tensor,
+    y: tf.Tensor,
+    image_size: int,
+) -> tuple[tf.Tensor, tf.Tensor]:
+    """Random crop of data."""
+    x_shape = tf.shape(x)
+    y_shape = tf.shape(y)
+    n1 = int(y_shape[1] / x_shape[1])
+    n2 = int(y_shape[2] / x_shape[2])
+    s1 = int(
+        tf.random.uniform(
+            (),
+            minval=0,
+            maxval=x_shape[1] - image_size,
+            dtype=tf.dtypes.int32,
+        )
     )
-    return ds.prefetch(buffer_size=AUTOTUNE)
+    s2 = int(
+        tf.random.uniform(
+            (),
+            minval=0,
+            maxval=x_shape[2] - image_size,
+            dtype=tf.dtypes.int32,
+        )
+    )
+    x = x[:, s1: s1 + image_size, s2: s2 + image_size, :]
+    y = y[:, s1 * n1: (s1 + image_size) * n1,  s2 * n2: (s2 + image_size) * n2]
+    return x, y
 
 
 @tf.function

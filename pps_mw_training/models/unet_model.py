@@ -11,12 +11,16 @@ from xarray import Dataset, DataArray  # type: ignore
 from pps_mw_training.utils.blocks import (
     ConvolutionBlock,
     DownsamplingBlock,
-    MLP,
+    MlpBlock,
     UpsamplingBlock,
 )
+from pps_mw_training.utils.layers import UpSampling2D
 from pps_mw_training.utils.data import random_crop_and_flip
 from pps_mw_training.utils.loss_function import quantile_loss
 from pps_mw_training.utils.scaler import Scaler
+
+
+AUTOTUNE = tf.data.AUTOTUNE
 
 
 class UNetBaseModel(keras.Model):
@@ -41,9 +45,10 @@ class UNetBaseModel(keras.Model):
         self.up_block_2 = UpsamplingBlock(n * 8, n * 4)
         self.up_block_3 = UpsamplingBlock(n * 4, n * 2)
         self.up_block_4 = UpsamplingBlock(n * 2, n * 1)
-        self.out_block = MLP(n_outputs, n_features, n_layers)
+        self.up_block = UpSampling2D()
+        self.out_block = MlpBlock(n_outputs, n_features, n_layers)
 
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor) -> tf.Tensor:
         d_0 = self.in_block(inputs)
         d_1 = self.down_block_1(d_0)
         d_2 = self.down_block_2(d_1)
@@ -53,6 +58,7 @@ class UNetBaseModel(keras.Model):
         u = self.up_block_2([u, d_2])
         u = self.up_block_3([u, d_1])
         u = self.up_block_4([u, d_0])
+        u = self.up_block(u)
         return self.out_block(u)
 
     def build_graph(self, image_size: int, n_inputs: int):
@@ -110,7 +116,8 @@ class UNetModel:
         validation_data: tuple[Dataset, DataArray],
         batch_size: int,
         n_epochs: int,
-        fill_value: float,
+        fill_value_images: float,
+        fill_value_labels: float,
         image_size: int,
         initial_learning_rate: float,
         first_decay_steps: int,
@@ -141,7 +148,7 @@ class UNetModel:
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
             loss=lambda y_true, y_pred: quantile_loss(
-                1, quantiles, y_true, y_pred,
+                1, quantiles, y_true, y_pred, fill_value=fill_value_labels,
             ),
         )
         output_path.mkdir(parents=True, exist_ok=True)
@@ -152,7 +159,8 @@ class UNetModel:
                 training_data,
                 batch_size,
                 image_size,
-                fill_value,
+                fill_value_images,
+                fill_value_labels,
             ),
             epochs=n_epochs,
             validation_data=cls.prepare_dataset(
@@ -160,7 +168,8 @@ class UNetModel:
                 validation_data,
                 batch_size,
                 image_size,
-                fill_value,
+                fill_value_images,
+                fill_value_labels,
             ),
             callbacks=[
                 keras.callbacks.ModelCheckpoint(
@@ -181,7 +190,7 @@ class UNetModel:
                         "n_features": n_features,
                         "n_layers": n_layers,
                         "quantiles": quantiles,
-                        "fill_value": fill_value,
+                        "fill_value": fill_value_images,
                         "model_weights": weights_file.as_posix(),
                     },
                     indent=4,
@@ -195,7 +204,8 @@ class UNetModel:
         training_data: tuple[Dataset, DataArray],
         batch_size: int,
         image_size: int,
-        fill_value: float,
+        fill_value_images: float,
+        fill_value_labels: float,
     ) -> tf.data.Dataset:
         """Prepare dataset for training."""
         input_scaler = Scaler.from_dict(input_parameters)
@@ -203,11 +213,15 @@ class UNetModel:
             training_data[0],
             input_scaler,
             input_parameters,
-            fill_value,
+            fill_value_images,
         )
         labels = np.expand_dims(training_data[1].values, axis=3)
-        labels[~np.isfinite(labels)] = fill_value
-        return random_crop_and_flip(images, labels, image_size, batch_size)
+        labels[~np.isfinite(labels)] = fill_value_labels
+        ds = tf.data.Dataset.from_tensor_slices((images, labels))
+        ds = ds.batch(batch_size)
+        ds = ds.map(lambda x, y: random_crop_and_flip(x, y, image_size))
+        ds.prefetch(buffer_size=AUTOTUNE)
+        return ds
 
     @staticmethod
     def prescale(

@@ -24,6 +24,8 @@ def train(
         train_fraction,
         validation_fraction,
         test_fraction,
+        settings.MIN_QUALITY,
+        settings.MAX_DISTANCE,
     )
     if not only_evaluate:
         UNetModel.train(
@@ -36,7 +38,8 @@ def train(
             val_ds,
             batch_size,
             n_epochs,
-            settings.FILL_VALUE,
+            settings.FILL_VALUE_IMAGES,
+            settings.FILL_VALUE_LABELS,
             settings.IMAGE_SIZE,
             settings.INITIAL_LEARNING_RATE,
             settings.FIRST_DECAY_STEPS,
