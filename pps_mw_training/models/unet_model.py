@@ -122,7 +122,7 @@ class UNetModel:
         """Train the model."""
         model_config_file = output_path / "network_config.json"
         if model_config_file.is_file():
-            # load and continue the training of an existing model 
+            # load and continue the training of an existing model
             model = cls.load(model_config_file).model
         else:
             n_inputs = len(input_parameters)
