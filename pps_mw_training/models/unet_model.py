@@ -120,12 +120,17 @@ class UNetModel:
         output_path: Path,
     ) -> None:
         """Train the model."""
-        n_inputs = len(input_parameters)
-        n_outputs = len(quantiles)
-        model = UNetBaseModel(
-            n_inputs, n_outputs, n_unet_base, n_features, n_layers,
-        )
-        model.build((None, None, None, n_inputs))
+        model_config_file = output_path / "network_config.json"
+        if model_config_file.is_file():
+            # load and continue the training of an existing model
+            model = cls.load(model_config_file).model
+        else:
+            n_inputs = len(input_parameters)
+            n_outputs = len(quantiles)
+            model = UNetBaseModel(
+                n_inputs, n_outputs, n_unet_base, n_features, n_layers,
+            )
+            model.build((None, None, None, n_inputs))
         learning_rate = tf.keras.optimizers.schedules.CosineDecayRestarts(
             initial_learning_rate=initial_learning_rate,
             first_decay_steps=first_decay_steps,
@@ -167,7 +172,7 @@ class UNetModel:
         )
         with open(output_path / "fit_history.json", "w") as outfile:
             outfile.write(json.dumps(history.history, indent=4))
-        with open(output_path / "network_config.json", "w") as outfile:
+        with open(model_config_file, "w") as outfile:
             outfile.write(
                 json.dumps(
                     {
