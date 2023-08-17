@@ -7,12 +7,6 @@ import numpy as np  # type: ignore
 import xarray as xr  # type: ignore
 
 
-# image size
-Y = 272
-X = 224
-N = 4
-
-
 BANDS = {
     "mw_low": {
         0: ["ATMS_01", "AMSUA_01"],  # 23.8 GHz
@@ -50,53 +44,6 @@ BANDS = {
     },
 }
 TRAINING_DATA_SHAPE = tuple[xr.Dataset, xr.DataArray]
-
-
-def get_training_dataset(
-    training_data_path: Path,
-    train_fraction: float,
-    validation_fraction: float,
-    test_fraction: float,
-) -> tuple[TRAINING_DATA_SHAPE, TRAINING_DATA_SHAPE, TRAINING_DATA_SHAPE]:
-    """Get training dataset."""
-    mw_files = list((training_data_path / "microwave").glob('*.nc*'))
-    radar_files = list((training_data_path / "radar").glob('*.nc*'))
-    files = match_files(mw_files, radar_files)
-    mw_data = xr.concat([load_netcdf_data(f) for f, _ in files], dim="time")
-    radar_data = xr.concat([load_netcdf_data(f) for _, f in files], dim="time")
-    mw_data = mw_data.sel(
-        {
-            "y": mw_data["y"].values[0: Y],
-            "x": mw_data["x"].values[0: X],
-        }
-    )
-    radar_data = radar_data.sel(
-        {
-            "y": radar_data["y"].values[0: N * Y: N],
-            "x": radar_data["x"].values[0: N * X: N],
-        }
-    )
-    n_samples = mw_data.time.size
-    fractions = [train_fraction, validation_fraction, test_fraction]
-    limits = np.cumsum([int(f * n_samples) for f in fractions])
-    idxs = np.random.permutation(n_samples)
-    idxs_train = idxs[0: limits[0]]
-    idxs_val = idxs[limits[0]: limits[1]]
-    idxs_test = idxs[limits[1]: limits[2]]
-    return (
-        (
-            mw_data.sel({"time": idxs_train}),
-            radar_data.sel({"time": idxs_train}).dbz,
-        ),
-        (
-            mw_data.sel({"time": idxs_val}),
-            radar_data.sel({"time": idxs_val}).dbz,
-        ),
-        (
-            mw_data.sel({"time": idxs_test}),
-            radar_data.sel({"time": idxs_test}).dbz,
-        ),
-    )
 
 
 def load_netcdf_data(
@@ -137,3 +84,97 @@ def match_files(
         index = radar_file_info.index(satellite_file_info)
         matched_files.append((satellite_file, radar_files[index]))
     return matched_files
+
+
+def filter_radar_data(
+    data: xr.Dataset,
+    qi_min: float,
+    distance_max: float,
+) -> xr.Dataset:
+    """Filter radar data on quality and distance from radar."""
+    filt = (
+        (data.qi >= qi_min)
+        & (data.distance_radar <= distance_max)
+    )
+    data.dbz.values[~filt.values] = np.nan
+    return data
+
+
+def split_training_data(
+    mw_data: xr.Dataset,
+    radar_data: xr.Dataset,
+    train_fraction: float,
+    validation_fraction: float,
+    test_fraction: float,
+) -> tuple[TRAINING_DATA_SHAPE, TRAINING_DATA_SHAPE, TRAINING_DATA_SHAPE]:
+    """Split training data into three parts."""
+    n_samples = mw_data.time.size
+    fractions = [train_fraction, validation_fraction, test_fraction]
+    limits = np.cumsum([int(f * n_samples) for f in fractions])
+    idxs = np.random.permutation(n_samples)
+    idxs_train = idxs[0: limits[0]]
+    idxs_val = idxs[limits[0]: limits[1]]
+    idxs_test = idxs[limits[1]: limits[2]]
+    return (
+        (
+            mw_data.sel({"time": idxs_train}),
+            radar_data.sel({"time": idxs_train}).dbz,
+        ),
+        (
+            mw_data.sel({"time": idxs_val}),
+            radar_data.sel({"time": idxs_val}).dbz,
+        ),
+        (
+            mw_data.sel({"time": idxs_test}),
+            radar_data.sel({"time": idxs_test}).dbz,
+        ),
+    )
+
+
+def fix_data_shape(
+    mw_data: xr.Dataset,
+    radar_data: xr.Dataset,
+    x: int = 224,
+    y: int = 272,
+    res: int = 2,
+) -> tuple[xr.Dataset, xr.Dataset]:
+    """Fix the shape of the training dataset."""
+    n = radar_data.y.size // mw_data.y.size
+    mw_data = mw_data.sel(
+        {
+            "y": mw_data["y"].values[0: y],
+            "x": mw_data["x"].values[0: x],
+        }
+    )
+    radar_data = radar_data.sel(
+        {
+            "y": radar_data["y"].values[0: n * y: res],
+            "x": radar_data["x"].values[0: n * x: res],
+        }
+    )
+    return mw_data, radar_data
+
+
+def get_training_dataset(
+    training_data_path: Path,
+    train_fraction: float,
+    validation_fraction: float,
+    test_fraction: float,
+    qi_min: float,
+    distance_max: float,
+) -> tuple[TRAINING_DATA_SHAPE, TRAINING_DATA_SHAPE, TRAINING_DATA_SHAPE]:
+    """Get training dataset."""
+    mw_files = list((training_data_path / "microwave").glob('*.nc*'))
+    radar_files = list((training_data_path / "radar").glob('*.nc*'))
+    files = match_files(mw_files, radar_files)
+    mw_data = xr.concat([load_netcdf_data(f) for f, _ in files], dim="time")
+    radar_data = xr.concat([load_netcdf_data(f) for _, f in files], dim="time")
+    mw_data, radar_data = fix_data_shape(mw_data, radar_data)
+    radar_data = filter_radar_data(radar_data, qi_min, distance_max)
+    return split_training_data(
+        mw_data,
+        radar_data,
+        train_fraction,
+        validation_fraction,
+        test_fraction,
+    )

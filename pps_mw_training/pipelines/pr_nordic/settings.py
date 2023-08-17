@@ -63,15 +63,20 @@ INPUT_PARAMS: List[Dict[str, Union[str, float, int]]] = [
 ]
 QUANTILES = [0.005, 0.025, 0.165, 0.250, 0.500, 0.750, 0.835, 0.975, 0.995]
 N_UNET_BASE = 16
+N_UNET_BLOCKS = 4
 N_FEATURES = 128
 N_LAYERS = 4
+# radar quality parameters
+MIN_QUALITY = 0.8  # radar quality index between 0 (poor) and 1 (good)
+MAX_DISTANCE = 200e3  # max distance [m] from radar
 # training parameters
-N_EPOCHS = 256
+N_EPOCHS = 128
 BATCH_SIZE = 32
 TRAIN_FRACTION = 0.7
 VALIDATION_FRACTION = 0.15
 TEST_FRACTION = 0.15
-FILL_VALUE = -1.1
+FILL_VALUE_IMAGES = -1.5
+FILL_VALUE_LABELS = -100.0
 IMAGE_SIZE = 128
 # learning rate parameters
 INITIAL_LEARNING_RATE = 0.0001
