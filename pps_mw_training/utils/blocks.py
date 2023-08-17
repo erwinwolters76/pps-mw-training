@@ -28,8 +28,7 @@ class ConvolutionBlock(layers.Layer):
         self.block.add(layers.BatchNormalization())
         self.block.add(layers.ReLU())
 
-    def call(self, input):
-        x = input
+    def call(self, x: tf.Tensor) -> tf.Tensor:
         return self.block(x)
 
 
@@ -48,7 +47,7 @@ class DownsamplingBlock(keras.Sequential):
 class UpsamplingBlock(layers.Layer):
     """
     An upsampling block which which uses bilinear interpolation
-    to increase the input size. This is followed by a 1x1 convolution to
+    to increase the resolution. This is followed by a 1x1 convolution to
     reduce the number of channels, concatenation of the skip inputs
     from the corresponding downsampling layer and a convolution block.
     """
@@ -59,17 +58,19 @@ class UpsamplingBlock(layers.Layer):
             size=(2, 2),
             interpolation="bilinear",
         )
-        input_shape = (None, None, channels_in)
-        self.reduce = layers.Conv2D(
-            channels_in // 2, 1, padding="same", input_shape=input_shape
+        self.reduce_channels = layers.Conv2D(
+            channels_in // 2, 1,
+            padding="same",
+            input_shape=(None, None, channels_in),
         )
         self.concat = layers.Concatenate()
         self.conv_block = ConvolutionBlock(channels_in, channels_out)
 
-    def call(self, inputs):
-        x, x_skip = inputs
-        x_up = self.reduce(self.upsample(x))
-        x = self.concat([x_up, x_skip])
+    def call(self, xs: tuple[tf.Tensor, tf.Tensor]) -> tf.Tensor:
+        x, x_skip = xs
+        x = self.upsample(x)
+        x = self.reduce_channels(x)
+        x = self.concat([x, x_skip])
         return self.conv_block(x)
 
 
@@ -79,8 +80,8 @@ class MLP(keras.Sequential):
     def __init__(
         self,
         n_outputs: int,
-        n_features: int = 128,
-        n_layers: int = 4,
+        n_features: int,
+        n_layers: int,
     ):
         super().__init__()
         for _ in range(n_layers - 1):
@@ -100,5 +101,5 @@ class SymmetricPadding(layers.Layer):
             [[0, 0], [amount, amount], [amount, amount], [0, 0]]
         )
 
-    def call(self, input):
-        return tf.pad(input, self.paddings, "SYMMETRIC")
+    def call(self, x: tf.Tensor) -> tf.Tensor:
+        return tf.pad(x, self.paddings, "SYMMETRIC")
