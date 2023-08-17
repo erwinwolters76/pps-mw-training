@@ -1,10 +1,9 @@
 import matplotlib.pyplot as plt  # type: ignore
-
 from tensorflow import keras  # type: ignore
 from xarray import Dataset, DataArray  # type: ignore
 
-from pps_mw_training.models.unet_model import UNetModel
 from pps_mw_training.pipelines.pr_nordic import settings
+from pps_mw_training.trainers.unet_trainer import UnetPredictor
 
 
 VMIN = -20
@@ -14,14 +13,14 @@ QUANTILE_IDXS = [3, 4, 5]
 
 
 def evaluate_model(
-    unet_model: UNetModel,
+    predictor: UnetPredictor,
     mw_data: Dataset,
     radar_data: DataArray,
 ) -> None:
     """Evaluata model, very rudimentary for the moment."""
-    unet_model.model.summary()
+    predictor.model.summary()
     keras.utils.plot_model(
-        unet_model.model.build_graph(128, len(settings.INPUT_PARAMS)),
+        predictor.model.build_graph(128, len(settings.INPUT_PARAMS)),
         to_file=settings.MODEL_CONFIG_PATH / "model.png",
         show_shapes=True,
         show_dtype=False,
@@ -32,7 +31,7 @@ def evaluate_model(
         layer_range=None,
         show_layer_activations=True,
     )
-    pred = unet_model.predict(mw_data)
+    pred = predictor.predict(mw_data)
     for idx in range(mw_data.time.size):
         plt.figure()
         plt.subplot(2, 3, 1)
