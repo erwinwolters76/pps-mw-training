@@ -31,6 +31,7 @@ def train(
         UNetModel.train(
             settings.INPUT_PARAMS,
             settings.N_UNET_BASE,
+            settings.N_UNET_BLOCKS,
             n_features,
             n_layers,
             settings.QUANTILES,

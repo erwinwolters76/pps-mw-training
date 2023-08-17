@@ -63,6 +63,7 @@ INPUT_PARAMS: List[Dict[str, Union[str, float, int]]] = [
 ]
 QUANTILES = [0.005, 0.025, 0.165, 0.250, 0.500, 0.750, 0.835, 0.975, 0.995]
 N_UNET_BASE = 16
+N_UNET_BLOCKS = 4
 N_FEATURES = 128
 N_LAYERS = 4
 # radar quality parameters

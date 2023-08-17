@@ -31,35 +31,38 @@ class UNetBaseModel(keras.Model):
         n_inputs: int,
         n_outputs: int,
         n_unet_base: int,
+        n_blocks: int,
         n_features: int,
         n_layers: int,
     ):
         super().__init__()
-        n = n_unet_base
-        self.in_block = ConvolutionBlock(n_inputs, n)
-        self.down_block_1 = DownsamplingBlock(n * 1, n * 2)
-        self.down_block_2 = DownsamplingBlock(n * 2, n * 4)
-        self.down_block_3 = DownsamplingBlock(n * 4, n * 8)
-        self.down_block_4 = DownsamplingBlock(n * 8, n * 16)
-        self.up_block_1 = UpsamplingBlock(n * 16, n * 8)
-        self.up_block_2 = UpsamplingBlock(n * 8, n * 4)
-        self.up_block_3 = UpsamplingBlock(n * 4, n * 2)
-        self.up_block_4 = UpsamplingBlock(n * 2, n * 1)
-        self.up_block = UpSampling2D()
-        self.out_block = MlpBlock(n_outputs, n_features, n_layers)
+        self.input_block = ConvolutionBlock(n_inputs, n_unet_base)
+        self.down_sampling_blocks = [
+            DownsamplingBlock(
+                n_unet_base * 2 ** i,
+                n_unet_base * 2 ** (i + 1),
+            ) for i in range(n_blocks)
+        ]
+        self.up_sampling_blocks = [
+            UpsamplingBlock(
+                n_unet_base * 2 ** (i + 1),
+                n_unet_base * 2 ** i,
+            ) for i in range(n_blocks - 1, -1, -1)
+        ]
+        self.up_sampling_layer = UpSampling2D()
+        self.output_block = MlpBlock(n_outputs, n_features, n_layers)
 
     def call(self, inputs: tf.Tensor) -> tf.Tensor:
-        d_0 = self.in_block(inputs)
-        d_1 = self.down_block_1(d_0)
-        d_2 = self.down_block_2(d_1)
-        d_3 = self.down_block_3(d_2)
-        d_4 = self.down_block_4(d_3)
-        u = self.up_block_1([d_4, d_3])
-        u = self.up_block_2([u, d_2])
-        u = self.up_block_3([u, d_1])
-        u = self.up_block_4([u, d_0])
-        u = self.up_block(u)
-        return self.out_block(u)
+        xs = []
+        x = self.input_block(inputs)
+        xs.append(x)
+        for down_block in self.down_sampling_blocks:
+            x = down_block(x)
+            xs.append(x)
+        for idx, up_block in enumerate(self.up_sampling_blocks):
+            x = up_block([x, xs[-2 - idx]])
+        x = self.up_sampling_layer(x)
+        return self.output_block(x)
 
     def build_graph(self, image_size: int, n_inputs: int):
         x = keras.Input(shape=(image_size, image_size, n_inputs))
@@ -92,6 +95,7 @@ class UNetModel:
             n_inputs,
             n_outputs,
             config["n_unet_base"],
+            config["n_unet_blocks"],
             config["n_features"],
             config["n_layers"],
         )
@@ -109,6 +113,7 @@ class UNetModel:
         cls,
         input_parameters: list[dict[str, Any]],
         n_unet_base: int,
+        n_unet_blocks: int,
         n_features: int,
         n_layers: int,
         quantiles: list[float],
@@ -135,7 +140,12 @@ class UNetModel:
             n_inputs = len(input_parameters)
             n_outputs = len(quantiles)
             model = UNetBaseModel(
-                n_inputs, n_outputs, n_unet_base, n_features, n_layers,
+                n_inputs,
+                n_outputs,
+                n_unet_base,
+                n_unet_blocks,
+                n_features,
+                n_layers,
             )
             model.build((None, None, None, n_inputs))
         learning_rate = tf.keras.optimizers.schedules.CosineDecayRestarts(
@@ -187,6 +197,7 @@ class UNetModel:
                     {
                         "input_parameters": input_parameters,
                         "n_unet_base": n_unet_base,
+                        "n_unet_blocks": n_unet_blocks,
                         "n_features": n_features,
                         "n_layers": n_layers,
                         "quantiles": quantiles,

@@ -7,6 +7,12 @@ from pps_mw_training.models.unet_model import UNetModel
 from pps_mw_training.pipelines.pr_nordic import settings
 
 
+VMIN = -20
+VMAX = 10
+CMAP = "coolwarm"
+QUANTILE_IDXS = [3, 4, 5]
+
+
 def evaluate_model(
     unet_model: UNetModel,
     mw_data: Dataset,
@@ -29,24 +35,21 @@ def evaluate_model(
     pred = unet_model.predict(mw_data)
     for idx in range(mw_data.time.size):
         plt.figure()
-        plt.subplot(2, 2, 1)
-        plt.imshow(mw_data["mw_183"][idx, :, :, 3], cmap="coolwarm")
+        plt.subplot(2, 3, 1)
+        plt.imshow(mw_data["mw_160"][idx, :, :, 0], cmap=CMAP)
         plt.colorbar()
-        plt.title("MW")
-        plt.subplot(2, 2, 2)
-        plt.imshow(radar_data.data[idx], cmap="coolwarm", vmin=-30, vmax=30)
+        plt.title("MW_160")
+        plt.subplot(2, 3, 2)
+        plt.imshow(mw_data["mw_183"][idx, :, :, 2], cmap=CMAP)
+        plt.colorbar()
+        plt.title("MW_183")
+        plt.subplot(2, 3, 3)
+        plt.imshow(radar_data.data[idx], cmap=CMAP, vmin=VMIN, vmax=VMAX)
         plt.colorbar()
         plt.title("Radar")
-        plt.subplot(2, 3, 4)
-        plt.imshow(pred[idx, :, :, 3], cmap="coolwarm")
-        plt.title("0.25")
-        plt.colorbar()
-        plt.subplot(2, 3, 5)
-        plt.imshow(pred[idx, :, :, 4], cmap="coolwarm")
-        plt.colorbar()
-        plt.title("0.5")
-        plt.subplot(2, 3, 6)
-        plt.imshow(pred[idx, :, :, 5], cmap="coolwarm")
-        plt.colorbar()
-        plt.title("0.75")
+        for i, qidx in enumerate(QUANTILE_IDXS):
+            plt.subplot(2, 3, 4 + i)
+            plt.imshow(pred[idx, :, :, qidx], cmap=CMAP, vmin=VMIN, vmax=VMAX)
+            plt.title(f"Quantile: {settings.QUANTILES[qidx]}")
+            plt.colorbar()
         plt.show()
