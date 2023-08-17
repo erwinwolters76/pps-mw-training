@@ -2,14 +2,15 @@ from pathlib import Path
 from typing import Dict, Optional
 import json
 
-from tensorflow import keras  # type: ignore
 from xarray import DataArray, Dataset  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np  # type: ignore
 
+from pps_mw_training.trainers.mlp_trainer import MlpPredictor
+
 
 def evaluate_model(
-    model: keras.Sequential,
+    model: MlpPredictor,
     dataset: Dataset,
     missing_fraction: float,
     output_path: Path,

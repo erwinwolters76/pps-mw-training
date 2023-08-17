@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from pps_mw_training.models.qrnn_model import QrnnModel
 from pps_mw_training.pipelines.iwp_ici import evaluation
 from pps_mw_training.pipelines.iwp_ici import settings
 from pps_mw_training.pipelines.iwp_ici import training_data
+from pps_mw_training.trainers.mlp_trainer import MlpTrainer
 
 
 def train(
@@ -30,7 +30,7 @@ def train(
         settings.NOISE,
     )
     if not only_evaluate:
-        QrnnModel.train(
+        MlpTrainer.train(
             settings.INPUT_PARAMS,
             settings.OUTPUT_PARAMS,
             n_hidden_layers,
@@ -50,7 +50,7 @@ def train(
             settings.FILL_VALUE,
             model_config_path,
         )
-    model = QrnnModel.load(model_config_path / "network_config.json")
+    model = MlpTrainer.load(model_config_path / "network_config.json")
     evaluation.evaluate_model(
         model, test_data, missing_fraction, model_config_path
     )

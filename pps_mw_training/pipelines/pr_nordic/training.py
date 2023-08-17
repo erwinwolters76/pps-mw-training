@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from pps_mw_training.models.unet_model import UNetModel
 from pps_mw_training.pipelines.pr_nordic import evaluation
 from pps_mw_training.pipelines.pr_nordic import settings
 from pps_mw_training.pipelines.pr_nordic import training_data
+from pps_mw_training.trainers.unet_trainer import UnetTrainer
 
 
 def train(
@@ -28,7 +28,7 @@ def train(
         settings.MAX_DISTANCE,
     )
     if not only_evaluate:
-        UNetModel.train(
+        UnetTrainer.train(
             settings.INPUT_PARAMS,
             settings.N_UNET_BASE,
             settings.N_UNET_BLOCKS,
@@ -49,5 +49,5 @@ def train(
             settings.ALPHA,
             model_config_path,
         )
-    unet_model = UNetModel.load(model_config_path / "network_config.json")
+    unet_model = UnetTrainer.load(model_config_path / "network_config.json")
     evaluation.evaluate_model(unet_model, test_ds[0], test_ds[1])
