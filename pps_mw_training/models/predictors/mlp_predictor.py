@@ -91,7 +91,7 @@ class MlpPredictor:
         self,
         input_data: Dataset,
     ) -> Dataset:
-        """Predict output fron input data."""
+        """Predict output from input data."""
         prescaled = self.prescale(
             input_data, self.pre_scaler, self.input_params,
         )
