@@ -6,7 +6,7 @@ from xarray import DataArray, Dataset  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np  # type: ignore
 
-from pps_mw_training.trainers.mlp_trainer import MlpPredictor
+from pps_mw_training.models.predictors.mlp_predictor import MlpPredictor
 
 
 def evaluate_model(

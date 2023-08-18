@@ -11,7 +11,7 @@ from pps_mw_training.utils.layers import UpSampling2D
 
 
 class UnetModel(keras.Model):
-    """U-Net convolutional neural network object."""
+    """U-Net convolutional neural network model."""
 
     def __init__(
         self,
