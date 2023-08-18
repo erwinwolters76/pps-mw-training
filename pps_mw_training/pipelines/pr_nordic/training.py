@@ -1,9 +1,9 @@
 from pathlib import Path
 
+from pps_mw_training.models.trainers.unet_trainer import UnetTrainer
 from pps_mw_training.pipelines.pr_nordic import evaluation
 from pps_mw_training.pipelines.pr_nordic import settings
 from pps_mw_training.pipelines.pr_nordic import training_data
-from pps_mw_training.trainers.unet_trainer import UnetTrainer
 
 
 def train(
@@ -49,5 +49,5 @@ def train(
             settings.ALPHA,
             model_config_path,
         )
-    unet_model = UnetTrainer.load(model_config_path / "network_config.json")
-    evaluation.evaluate_model(unet_model, test_ds[0], test_ds[1])
+    model = UnetTrainer.load(model_config_path / "network_config.json")
+    evaluation.evaluate_model(model, test_ds[0], test_ds[1])

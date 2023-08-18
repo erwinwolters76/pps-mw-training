@@ -1,9 +1,9 @@
 from pathlib import Path
 
+from pps_mw_training.models.trainers.mlp_trainer import MlpTrainer
 from pps_mw_training.pipelines.iwp_ici import evaluation
 from pps_mw_training.pipelines.iwp_ici import settings
 from pps_mw_training.pipelines.iwp_ici import training_data
-from pps_mw_training.trainers.mlp_trainer import MlpTrainer
 
 
 def train(

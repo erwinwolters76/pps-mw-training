@@ -3,7 +3,7 @@ from tensorflow import keras  # type: ignore
 from xarray import Dataset, DataArray  # type: ignore
 
 from pps_mw_training.pipelines.pr_nordic import settings
-from pps_mw_training.trainers.unet_trainer import UnetPredictor
+from pps_mw_training.models.predictors.unet_predictor import UnetPredictor
 
 
 VMIN = -20
