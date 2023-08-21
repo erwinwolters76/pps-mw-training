@@ -33,11 +33,43 @@ The package contains a test suite can be run by tox_:
 
 .. _tox: https://pypi.org/project/tox/
 
+
+
+
 Run package scripts
 -------------------
 
-So far the package contains two training pipelines,
-and you can run one of the pipeline as described below:
+The package contains three types of scripts:
+
+  * `regrid` - for regridding of data to produce a training dataset
+
+  * `reformat` - for reformating of data files to produce a training dataset
+
+  * `train` - for training of neural networks
+  
+So far the package contains two training pipelines:
+  
+   * one pipeline (`iwp_ici`) for the training of a multilayer perceptron quantile
+     regression neural network for the retrieval of ice water path and
+     related quantities from EPS-SG ICI data.
+     The training utilizes a simulated training dataset, consisting of a set of
+     geophysical states and associated simulated ICI observation, and this dataset
+     was generated within an EUMETSAT funded activity. 
+
+   * a second pipeline (`pr_nordic`) for the training of a U-Net convolutional quantile
+     regression neural network for the retrieval of precipitation rate
+     over the nordic region and from JPSS1/ATMS and N-SPP/ATMS data.
+     To run the full training pipeline one must first run the
+     `regrid` and `reformat` script to crate the training dataset
+     consisting of BALTRAD composites and regridded ATMS data. 
+     The full training pipeline is under development.
+
+.. raw:: pdf
+
+    PageBreak
+
+You can run a training pipeline as described below, :
+
 
 .. code-block:: console
 
