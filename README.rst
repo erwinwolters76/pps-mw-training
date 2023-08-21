@@ -68,7 +68,7 @@ So far the package contains two training pipelines:
 
     PageBreak
 
-You can run a training pipeline as described below, :
+You can run a training pipeline as described below:
 
 
 .. code-block:: console
