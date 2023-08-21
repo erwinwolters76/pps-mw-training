@@ -34,42 +34,44 @@ The package contains a test suite can be run by tox_:
 .. _tox: https://pypi.org/project/tox/
 
 
+Training pipelines
+------------------
 
+The package currently contains two training "pipelines":
+  
+   * `iwp_ici` - for the training of a multilayer perceptron quantile
+     regression neural network for the retrieval of ice water path and
+     related quantities from EPS-SG ICI data,
+
+   * `pr_nordic` - for the training of a U-Net convolutional quantile
+     regression neural network for the retrieval of precipitation rate
+     over the nordic region and from JPSS1/ATMS and N-SPP/ATMS data.
+
+The two pipelines differ a bit in complexity. The `iwp_ici` pipeline
+is less complex and uses a fixed training dataset, and this package
+does not contain the tools to generate this training dataset.
+However, tools for the generation of a training dataset are included  
+for the `pr_nordic` pipeline.
 
 Run package scripts
 -------------------
 
-The package contains three types of scripts:
+The package contains three scripts:
 
-  * `regrid` - for regridding of data to produce a training dataset
+  * `regrid` - for regridding of data to produce a training dataset,
 
-  * `reformat` - for reformating of data files to produce a training dataset
+  * `reformat` - for reformating of data files to produce a training dataset,
 
-  * `train` - for training of neural networks
-  
-So far the package contains two training pipelines:
-  
-   * one pipeline (`iwp_ici`) for the training of a multilayer perceptron quantile
-     regression neural network for the retrieval of ice water path and
-     related quantities from EPS-SG ICI data.
-     The training utilizes a simulated training dataset, consisting of a set of
-     geophysical states and associated simulated ICI observation, and this dataset
-     was generated within an EUMETSAT funded activity. 
+  * `train` - for training of neural networks.
 
-   * a second pipeline (`pr_nordic`) for the training of a U-Net convolutional quantile
-     regression neural network for the retrieval of precipitation rate
-     over the nordic region and from JPSS1/ATMS and N-SPP/ATMS data.
-     To run the full training pipeline one must first run the
-     `regrid` and `reformat` script to crate the training dataset
-     consisting of BALTRAD composites and regridded ATMS data. 
-     The full training pipeline is under development.
+You only should run the `train` script for the `iwp_ici` pipeline,
+but you need to run all three type of scripts for the `pr_nordic` pipeline.
+Each script has a command line interface, and you can e.g. run the `train`
+script as described below:
 
 .. raw:: pdf
 
     PageBreak
-
-You can run a training pipeline as described below:
-
 
 .. code-block:: console
 
@@ -86,11 +88,6 @@ You can run a training pipeline as described below:
 
   options:
     -h, --help           show this help message and exit
-
-
-.. raw:: pdf
-
-    PageBreak
 
 
 .. code-block:: console
@@ -129,3 +126,16 @@ You can run a training pipeline as described below:
     -w MODEL_CONFIG_PATH, --write MODEL_CONFIG_PATH
                           Path to use for saving the trained model config, or to read from for an evaluation purpose, default is /home/a002491/work/pps-mw-
                           training/saved_model
+
+
+Prior to running the actual training of the `pr_nordic` pipeline one must create
+the training dataset, i.e: 
+
+  * `regrid` - regrid ATMS data onto positions of the grid of the BALTRAD data,
+    note that this is a quite computational expensive operation,
+
+  * `reformat` - reformat BALTRAD data, saves the BALTRAD composites
+    in a new file format only including the data needed for the training.
+    This step, in practise, only reduces the file size of the BALTRAD composites. 
+    Currently, the `train` script only handles reformatted  BALTRAD
+    composites, so, at least for now, it is necessary to perform this processing.

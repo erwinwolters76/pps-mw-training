@@ -1,13 +1,16 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from enum import Enum
 from math import ceil
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np  # type: ignore
 import xarray as xr  # type: ignore
 
-from pps_mw_training.pipelines.pr_nordic.data.data_model import BANDS
+from pps_mw_training.pipelines.pr_nordic.data.data_model import (
+    BANDS, ChannelAtms
+)
 
 
 FILENAME_FMT = "mw_%Y%m%d_%H_%M.nc"
@@ -21,7 +24,53 @@ COMPRESSION = {
 
 
 @dataclass
-class Writer:
+class Reshaper:
+    """Reshaper class."""
+
+    dataset: xr.Dataset
+
+    def _get_empty_band_dataset(self) -> xr.Dataset:
+        """Get empty band dataset."""
+        return xr.Dataset(
+            {
+                band: (
+                    ("y", "x", f"channel_{band}"),
+                    np.full(
+                        (
+                            self.dataset.y.size,
+                            self.dataset.x.size,
+                            len(BANDS[band]),
+                        ),
+                        np.nan,
+                    ),
+                ) for band in BANDS
+            },
+        )
+
+    @property
+    def attrs(self) -> dict[str, Any]:
+        """Fix attributess."""
+        attrs = self.dataset.attrs
+        if "time" in attrs and isinstance(attrs["time"], datetime):
+            attrs["time"] = attrs["time"].isoformat()
+        if "crs" in attrs:
+            attrs["crs"] = str(attrs["crs"])
+        return attrs
+
+    def reshape(self) -> xr.Dataset:
+        """Get dataset as a band dataset."""
+        data = self._get_empty_band_dataset()
+        for c in self.dataset:
+            for b in BANDS:
+                for idx, names in BANDS[b].items():
+                    if c.name in names:
+                        data[b].values[:, :, idx] = self.dataset[c].values
+        data.attrs = self.attrs
+        return data
+
+
+@dataclass
+class Writer(Reshaper):
     """Writer class."""
 
     dataset: xr.Dataset
@@ -48,57 +97,17 @@ class Writer:
             + timedelta(minutes=(minute * round(t0.minute / minute)))
         )
 
-    @staticmethod
-    def fix_attrs(
-        attrs: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Fix attributess."""
-        if "time" in attrs and isinstance(attrs["time"], datetime):
-            attrs["time"] = attrs["time"].isoformat()
-        if "crs" in attrs:
-            attrs["crs"] = str(attrs["crs"])
-        return attrs
-
-    def _get_empty_band_dataset(self) -> xr.Dataset:
-        """Get empty band dataset."""
-        return xr.Dataset(
-            {
-                band: (
-                    ("y", "x", f"channel_{band}"),
-                    np.full(
-                        (
-                            self.dataset.y.size,
-                            self.dataset.x.size,
-                            len(BANDS[band]),
-                        ),
-                        np.nan,
-                    ),
-                ) for band in BANDS
-            },
-            attrs=self.fix_attrs(self.dataset.attrs),
-        )
-
-    def get_reshaped_dataset(self) -> xr.Dataset:
-        """Get reshaped dataset."""
-        data = self._get_empty_band_dataset()
-        for c in self.dataset:
-            for b in BANDS:
-                for idx, names in BANDS[b].items():
-                    if c.name in names:
-                        data[b].values[:, :, idx] = self.dataset[c].values
-        return data
-
     def write(
         self,
     ) -> Path:
         """Write data to file."""
-        outfile = self.output_filepath
-        dataset = self.get_reshaped_dataset()
+        output_filepath = self.output_filepath
+        dataset = self.reshape()
         dataset.to_netcdf(
-            outfile,
+            output_filepath,
             encoding={band: COMPRESSION for band in dataset.variables},
         )
-        return outfile
+        return output_filepath
 
 
 def reshape_filelist(
@@ -110,3 +119,10 @@ def reshape_filelist(
         files[idx * chunk_size: idx * chunk_size + chunk_size]
         for idx in range(ceil(len(files) / chunk_size))
     ]
+
+
+def get_channels(
+    params: list[dict[str, Any]],
+) -> Sequence[Enum]:
+    """Get sequence of channels from params dict."""
+    return [ChannelAtms[BANDS[p["band"]][p["index"]][0]] for p in params]

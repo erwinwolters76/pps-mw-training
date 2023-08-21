@@ -6,22 +6,14 @@ from typing import Sequence
 import argparse
 import logging
 
+
 from pps_mw_training.pipelines.pr_nordic.data import utils
 from pps_mw_training.pipelines.pr_nordic.data.atms import AtmsL1bReader
 from pps_mw_training.pipelines.pr_nordic.data.baltrad import BaltradReader
-from pps_mw_training.pipelines.pr_nordic.data.data_model import ChannelAtms
 from pps_mw_training.pipelines.pr_nordic.data.regridder import Regridder
+from pps_mw_training.pipelines.pr_nordic.settings import INPUT_PARAMS
 
 
-CHANNELS = [
-    ChannelAtms.ATMS_16,
-    ChannelAtms.ATMS_17,
-    ChannelAtms.ATMS_18,
-    ChannelAtms.ATMS_19,
-    ChannelAtms.ATMS_20,
-    ChannelAtms.ATMS_21,
-    ChannelAtms.ATMS_22,
-]
 CHUNKSIZE = 16
 
 
@@ -44,9 +36,9 @@ def regrid_files(
     for files in utils.reshape_filelist(level1b_files, chunk_size):
         logging.info(f"Start processing {files[0]}.")
         data = AtmsL1bReader.get_data(files)
-        regridded = Regridder(data, grid).regrid(channels, method=method)
-        if regridded is not None:
-            outfile = utils.Writer(regridded, outpath).write()
+        data = Regridder(data, grid).regrid(channels, method=method)
+        if data is not None:
+            outfile = utils.Writer(data, outpath).write()
             logging.info(f"Wrote {outfile} to disc.")
         else:
             logging.warning("No outfile was written.")
@@ -101,7 +93,7 @@ def cli(args_list: list[str]) -> None:
         grid_step=args.grid_step,
         method=args.method,
         chunk_size=CHUNKSIZE,
-        channels=CHANNELS,
+        channels=utils.get_channels(INPUT_PARAMS),
         outpath=Path(args.outpath),
     )
 
