@@ -20,7 +20,7 @@ BALTRAD_FILE = "comp_pcappi_blt2km_pn150_{datestr}_0x40000000001.h5"
 class BaltradReader:
     """Class for reading baltrad file."""
 
-    l1b_file: Path
+    product_file: Path
 
     @classmethod
     def from_datetime(
@@ -36,7 +36,7 @@ class BaltradReader:
 
     @cached_property
     def _data(self):
-        return h5py.File(self.l1b_file, "r")
+        return h5py.File(self.product_file, "r")
 
     @property
     def crs(self) -> CRS:
@@ -95,8 +95,8 @@ class BaltradReader:
         transformer = Transformer.from_crs(WGS84, self.crs)
         _, lower = transformer.transform(*self.lower_left)
         return np.linspace(
-            lower,
             lower + self.y_scale * (self.y_size - 1),
+            lower,
             self.y_size,
         )
 
@@ -197,28 +197,22 @@ class BaltradReader:
         )
 
 
-def reformat_baltrad_files(
+def reformat(
     t0: datetime,
     t1: datetime,
     basepath: Path,
     outpath: Path,
 ) -> None:
     """Reformat baltrad data files."""
+    outpath = outpath / "radar"
+    outpath.mkdir(parents=True, exist_ok=True)
     ti = t0
     while ti <= t1:
         reader = BaltradReader.from_datetime(ti, basepath)
         data = reader.get_data()
-        comp = {
-            "dtype": "int16",
-            "scale_factor": 0.01,
-            "zlib": True,
-            "_FillValue": -99,
-        }
-        comp = {"zlib": True}
-        encoding = {var: comp for var in data.variables}
-        output_filename = (
-            outpath / "radar" / ti.strftime("radar_%Y%m%d_%H_%M.nc")
-        )
         data.attrs["crs"] = str(data.attrs["crs"])
-        data.to_netcdf(output_filename, encoding=encoding)
+        data.to_netcdf(
+            outpath / ti.strftime("radar_%Y%m%d_%H_%M.nc"),
+            encoding={var: {"zlib": True} for var in data.variables},
+        )
         ti += timedelta(minutes=15)
