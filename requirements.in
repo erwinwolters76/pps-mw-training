@@ -1,5 +1,7 @@
+h5py
 matplotlib
 netcdf4
 numpy
+pyproj
 tensorflow
 xarray
