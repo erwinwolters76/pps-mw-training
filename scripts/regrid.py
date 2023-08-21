@@ -1,12 +1,28 @@
 #!/usr/bin/env python
+from enum import Enum
 from pathlib import Path
 from sys import argv
-from typing import List
+from typing import Sequence
 import argparse
 import logging
 
+from pps_mw_training.pipelines.pr_nordic.data import utils
 from pps_mw_training.pipelines.pr_nordic.data.atms import AtmsL1bReader
 from pps_mw_training.pipelines.pr_nordic.data.baltrad import BaltradReader
+from pps_mw_training.pipelines.pr_nordic.data.data_model import ChannelAtms
+from pps_mw_training.pipelines.pr_nordic.data.regridder import Regridder
+
+
+CHANNELS = [
+    ChannelAtms.ATMS_16,
+    ChannelAtms.ATMS_17,
+    ChannelAtms.ATMS_18,
+    ChannelAtms.ATMS_19,
+    ChannelAtms.ATMS_20,
+    ChannelAtms.ATMS_21,
+    ChannelAtms.ATMS_22,
+]
+CHUNKSIZE = 16
 
 
 logging.basicConfig(level=logging.INFO)
@@ -17,22 +33,27 @@ def regrid_files(
     level1b_files: list[Path],
     baltrad_file: Path,
     grid_step: int,
+    method: str,
+    chunk_size,
+    channels: Sequence[Enum],
     outpath: Path,
 ) -> None:
     """Regrid files."""
     baltrad_reader = BaltradReader(baltrad_file)
     grid = baltrad_reader.get_grid(grid_step)
-    print(grid)
-    for level1b_file in level1b_files:
-        logging.info(f"Start processing {level1b_file}.")
-        atms_reader = AtmsL1bReader(level1b_file)
-        data = atms_reader.get_data()
-        print(data)
-        # {TODO: add regeridding and writing of data}
-        logging.info(f"Done processing  {level1b_file}.")
+    for files in utils.reshape_filelist(level1b_files, chunk_size):
+        logging.info(f"Start processing {files[0]}.")
+        data = AtmsL1bReader.get_data(files)
+        regridded = Regridder(data, grid).regrid(channels, method=method)
+        if regridded is not None:
+            outfile = utils.Writer(regridded, outpath).write()
+            logging.info(f"Wrote {outfile} to disc.")
+        else:
+            logging.warning("No outfile was written.")
+        logging.info(f"Done processing  {files[0]}.")
 
 
-def cli(args_list: List[str]) -> None:
+def cli(args_list: list[str]) -> None:
     parser = argparse.ArgumentParser(
         description="Regrid data from ATMS onto the Baltrad grid."
     )
@@ -48,12 +69,14 @@ def cli(args_list: List[str]) -> None:
         help="Full path to a Baltrad pn150 file.",
     )
     parser.add_argument(
-        "-s",
-        "--grid-step",
-        dest="grid_step",
-        type=int,
-        help="Grid step for regridding, e.g. 4 means every forth position",
-        default=4,
+        "-m",
+        "--method",
+        dest="method",
+        type=str,
+        choices=["linear", "nearest"],
+        help="Interpolation method",
+        default="linear",
+
     )
     parser.add_argument(
         "-o",
@@ -63,11 +86,24 @@ def cli(args_list: List[str]) -> None:
         help="Path where to write data from processed files.",
         default="/tmp",
     )
+    parser.add_argument(
+        "-s",
+        "--grid-step",
+        dest="grid_step",
+        type=int,
+        help="Grid step for regridding, e.g. 4 means every forth position",
+        default=4,
+    )
     args = parser.parse_args(args_list)
-    level1b_files = [Path(f) for f in args.level1b_files]
-    baltrad_file = Path(args.baltrad_file)
-    outpath = Path(args.outpath)
-    regrid_files(level1b_files, baltrad_file, args.grid_step, outpath)
+    regrid_files(
+        level1b_files=[Path(f) for f in args.level1b_files],
+        baltrad_file=Path(args.baltrad_file),
+        grid_step=args.grid_step,
+        method=args.method,
+        chunk_size=CHUNKSIZE,
+        channels=CHANNELS,
+        outpath=Path(args.outpath),
+    )
 
 
 if __name__ == "__main__":

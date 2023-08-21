@@ -7,42 +7,6 @@ import numpy as np  # type: ignore
 import xarray as xr  # type: ignore
 
 
-BANDS = {
-    "mw_low": {
-        0: ["ATMS_01", "AMSUA_01"],  # 23.8 GHz
-        1: ["ATMS_02", "AMSUA_02"],  # 31.4 GHz
-    },
-    "mw_50": {
-        0: ["ATMS_03", "AMSUA_03"],  # 50.3 GHz
-        1: ["ATMS_04"],  # 51.76 GHz
-        2: ["ATMS_05", "AMSUA_04"],  # 52.8 GHz
-        3: ["ATMS_06", "AMSUA_05"],  # 53.596 +/- 0.115
-        4: ["ATMS_07", "AMSUA_06"],  # 54.4 GHz
-        5: ["ATMS_08", "AMSUA_07"],  # 54.94 GHz
-        6: ["ATMS_09", "AMSUA_08"],  # 55.5 GHz
-        7: ["ATMS_10", "AMSUA_09"],  # 57.290344 GHz
-        8: ["ATMS_11", "AMSUA_10"],  # 57.290344 +/- 0.217 GHz
-        9: ["ATMS_12", "AMSUA_11"],  # 57.290344 +/- 0.3222 +/- 0.048 GHz
-        10: ["ATMS_13", "AMSUA_12"],  # 57.290344 +/- 0.3222 +/- 0.022 GHz
-        11: ["ATMS_14", "AMSUA_13"],  # 57.290344 +/- 0.3222 +/- 0.010 GHz
-        12: ["ATMS_15", "AMSUA_14"],  # 57.290344 +/- 0.3222 +/- 0.0045 GHz
-    },
-    "mw_90": {
-        0: ["ATMS_16"],  # 88.2 GHz
-        1: ["MHS_01", "AMSUA_15"],  # 89 GHz
-    },
-    "mw_160": {
-        0: ["ATMS_17"],  # 166 GHz
-        1: ["MHS_02"],  # 157 GHz
-    },
-    "mw_183": {
-        0: ["ATMS_18", "MHS_05"],  # 183 +/- 1 GHz
-        1: ["ATMS_19"],  # 183 +/- 1.8 GHz
-        2: ["ATMS_20", "MHS_04"],  # 183 +/- 3, GHz
-        3: ["ATMS_21"],  # 183 +/- 4.5 GHz
-        4: ["ATMS_22", "MHS_03"],  # 183 +/- 7 GHz
-    },
-}
 TRAINING_DATA_SHAPE = tuple[xr.Dataset, xr.DataArray]
 
 
@@ -164,9 +128,9 @@ def get_training_dataset(
     distance_max: float,
 ) -> tuple[TRAINING_DATA_SHAPE, TRAINING_DATA_SHAPE, TRAINING_DATA_SHAPE]:
     """Get training dataset."""
-    mw_files = list((training_data_path / "microwave").glob('*.nc*'))
+    sat_files = list((training_data_path / "satellite").glob('*.nc*'))
     radar_files = list((training_data_path / "radar").glob('*.nc*'))
-    files = match_files(mw_files, radar_files)
+    files = match_files(sat_files, radar_files)
     mw_data = xr.concat([load_netcdf_data(f) for f, _ in files], dim="time")
     radar_data = xr.concat([load_netcdf_data(f) for _, f in files], dim="time")
     mw_data, radar_data = fix_data_shape(mw_data, radar_data)

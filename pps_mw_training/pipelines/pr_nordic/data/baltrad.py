@@ -10,8 +10,10 @@ import numpy as np  # type: ignore
 import xarray as xr  # type: ignore
 
 
+from pps_mw_training.pipelines.pr_nordic.data.regridder import WGS84
+
+
 BALTRAD_FILE = "comp_pcappi_blt2km_pn150_{datestr}_0x40000000001.h5"
-WGS84 = "EPSG:4326"
 
 
 @dataclass
@@ -152,6 +154,7 @@ class BaltradReader:
         )
 
     def get_grid(self, step: int) -> xr.Dataset:
+        """Get grid."""
         x = self.x[0::step]
         y = self.y[0::step]
         xs, ys = np.meshgrid(x, y)
@@ -192,18 +195,6 @@ class BaltradReader:
                 "yscale": y[1] - y[0],
             },
         )
-
-
-def transform(
-    dataset: xr.Dataset,
-    crs: CRS,
-) -> Tuple[np.ndarray, np.ndarray]:
-    transformer = Transformer.from_crs(WGS84, crs)
-    x, y = transformer.transform(
-        dataset.lat.values.squeeze(),
-        dataset.lon.values.squeeze(),
-    )
-    return x, y
 
 
 def reformat_baltrad_files(

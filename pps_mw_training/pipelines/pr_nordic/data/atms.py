@@ -3,7 +3,6 @@ from functools import cached_property
 from pathlib import Path
 from typing import Dict, Union
 
-import numpy as np  # type: ignore
 import xarray as xr  # type: ignore
 
 from pps_mw_training.pipelines.pr_nordic.data.data_model import (
@@ -30,40 +29,47 @@ class AtmsL1bReader:
     @property
     def attrs(self) -> Dict[str, Union[str, Platform]]:
         platform = Platform.from_string(self._data.attrs["platform"])
-        return self._data.attrs | {"platform": platform, "sensor": "ATMS"}
+        return self._data.attrs | {"platform": platform.name, "sensor": "ATMS"}
 
-    @property
-    def tb(self) -> np.ndarray:
-        return np.moveaxis(self._data.antenna_temp.values, -1, 0)
-
-    @property
-    def time(self) -> np.ndarray:
-        return self._data.obs_time_tai93.values[:, 0]
-
-    @property
-    def lat(self) -> np.ndarray:
-        return self._data.lat.values
-
-    @property
-    def lon(self) -> np.ndarray:
-        return self._data.lon.values
-
-    @property
-    def zenith_angle(self) -> np.ndarray:
-        return self._data.sat_zen.values
-
-    def get_data(self) -> xr.Dataset:
-        """Get level1b dataset."""
+    def get_ta_dataset(self) -> xr.Dataset:
+        """Get antenna temperature dataset."""
         return xr.Dataset(
             data_vars={
-                "zenith_angle": (("y", "x"), self.zenith_angle),
-                "tb": (("channel", "y", "x"), self.tb),
+                channel: (
+                    ("y", "x"),
+                    self._data.antenna_temp.values[:, :, channel.value],
+                )
+                for channel in ChannelAtms
+            }
+        )
+
+    def get_geolocation_dataset(self) -> xr.Dataset:
+        """Get geolocation dataset."""
+        return xr.Dataset(
+            data_vars={
+                "sun_zenith": (("y", "x"), self._data.sol_zen.values),
+                "sun_azimuth": (("y", "x"), self._data.sol_azi.values),
+                "sat_zenith": (("y", "x"), self._data.sat_zen.values),
+                "sat_azimuth": (("y", "x"), self._data.sat_azi.values),
             },
             coords={
-                "time": ("y", self.time),
-                "lat": (("y", "x"), self.lat),
-                "lon": (("y", "x"), self.lon),
-                "channel": ("channel", list(ChannelAtms)),
+                "time": ("y", self._data.obs_time_tai93.values[:, 0]),
+                "lat": (("y", "x"), self._data.lat.values),
+                "lon": (("y", "x"), self._data.lon.values),
             },
             attrs=self.attrs,
         )
+
+    def _get_data(self) -> xr.Dataset:
+        """Get level1b dataset."""
+        return xr.merge(
+            [self.get_geolocation_dataset(), self.get_ta_dataset()]
+        )
+
+    @classmethod
+    def get_data(
+        cls,
+        l1b_files: list[Path],
+    ) -> xr.Dataset:
+        """Get ATMS level1b data from a list of level1b files."""
+        return xr.concat([cls(f)._get_data() for f in l1b_files], dim="y")
