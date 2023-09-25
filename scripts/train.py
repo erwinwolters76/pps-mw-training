@@ -189,8 +189,10 @@ def cli(args_list: list[str] = argv[1:]) -> None:
         subparsers,
         PipelineType.PR_NORDIC,
         (
-            "Run the Nordic precip training pipeline. "
-            "N.B. this pipeline is not yet fully implemented."
+            "Run the Nordic precip training pipeline for the training "
+            "of a U-Net convolutional and quantile regression neural "
+            "network, for the retrieval of ground based radar "
+            "reflectivity data from microwave sounding data."
         ),
         pnt.settings.N_LAYERS,
         pnt.settings.N_FEATURES,

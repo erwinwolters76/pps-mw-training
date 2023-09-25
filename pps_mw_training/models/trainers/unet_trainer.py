@@ -3,19 +3,15 @@ from pathlib import Path
 from typing import Any
 import json
 
-import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 from tensorflow import keras
-from xarray import Dataset, DataArray  # type: ignore
 
 from pps_mw_training.models.unet_model import UnetModel
 from pps_mw_training.models.predictors.unet_predictor import UnetPredictor
+from pps_mw_training.models.trainers.utils import MemoryUsageCallback
 from pps_mw_training.utils.augmentation import random_crop_and_flip
 from pps_mw_training.utils.loss_function import quantile_loss
 from pps_mw_training.utils.scaler import Scaler
-
-
-AUTOTUNE = tf.data.AUTOTUNE
 
 
 @dataclass
@@ -38,9 +34,8 @@ class UnetTrainer(UnetPredictor):
         n_features: int,
         n_layers: int,
         quantiles: list[float],
-        training_data: tuple[Dataset, DataArray],
-        validation_data: tuple[Dataset, DataArray],
-        batch_size: int,
+        training_data: tf.data.Dataset,
+        validation_data: tf.data.Dataset,
         n_epochs: int,
         fill_value_images: float,
         fill_value_labels: float,
@@ -84,30 +79,24 @@ class UnetTrainer(UnetPredictor):
         )
         output_path.mkdir(parents=True, exist_ok=True)
         weights_file = output_path / "weights.h5"
+        training_data = training_data.map(
+            lambda x, y: random_crop_and_flip(x, y, tf.constant(image_size))
+        )
+        validation_data = validation_data.map(
+            lambda x, y: random_crop_and_flip(x, y, tf.constant(image_size))
+        )
+        validation_data = validation_data.cache()
         history = model.fit(
-            cls.prepare_dataset(
-                input_parameters,
-                training_data,
-                batch_size,
-                image_size,
-                fill_value_images,
-                fill_value_labels,
-            ),
+            training_data,
             epochs=n_epochs,
-            validation_data=cls.prepare_dataset(
-                input_parameters,
-                validation_data,
-                batch_size,
-                image_size,
-                fill_value_images,
-                fill_value_labels,
-            ),
+            validation_data=validation_data,
             callbacks=[
                 keras.callbacks.ModelCheckpoint(
                     weights_file,
                     save_best_only=True,
                     save_weights_only=True,
-                )
+                ),
+                MemoryUsageCallback(),
             ],
         )
         with open(output_path / "fit_history.json", "w") as outfile:
@@ -128,29 +117,3 @@ class UnetTrainer(UnetPredictor):
                     indent=4,
                 )
             )
-
-    @classmethod
-    def prepare_dataset(
-        cls,
-        input_parameters: list[dict[str, Any]],
-        training_data: tuple[Dataset, DataArray],
-        batch_size: int,
-        image_size: int,
-        fill_value_images: float,
-        fill_value_labels: float,
-    ) -> tf.data.Dataset:
-        """Prepare dataset for training."""
-        input_scaler = Scaler.from_dict(input_parameters)
-        images = cls.prescale(
-            training_data[0],
-            input_scaler,
-            input_parameters,
-            fill_value_images,
-        )
-        labels = np.expand_dims(training_data[1].values, axis=3)
-        labels[~np.isfinite(labels)] = fill_value_labels
-        ds = tf.data.Dataset.from_tensor_slices((images, labels))
-        ds = ds.batch(batch_size)
-        ds = ds.map(lambda x, y: random_crop_and_flip(x, y, image_size))
-        ds.prefetch(buffer_size=AUTOTUNE)
-        return ds
