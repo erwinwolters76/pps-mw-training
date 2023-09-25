@@ -53,4 +53,4 @@ def train(
             model_config_path,
         )
     model = UnetTrainer.load(model_config_path / "network_config.json")
-    evaluation.evaluate_model(model, test_ds)
+    evaluation.evaluate_model(model, test_ds, model_config_path)

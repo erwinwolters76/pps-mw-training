@@ -10,12 +10,12 @@ class MemoryUsageCallback(Callback):
     """Monitor memory usage on epoch begin and end, collect garbage"""
 
     def pss(self):
-        return psutil.Process(os.getpid()).memory_info().rss
+        return f"{psutil.Process(os.getpid()).memory_info().rss / 1e6} MB"
 
     def on_epoch_begin(self, epoch, logs=None):
-        print(f"**Epoch {epoch}: memory usage on epoch begin: {self.pss()}")
+        print(f"Epoch {epoch + 1}, memory usage on epoch begin: {self.pss()}")
 
     def on_epoch_end(self, epoch, logs=None):
-        print(f"memory usage on epoch end:  {self.pss()}.")
+        print(f"Epoch {epoch + 1}, memory usage on epoch end:  {self.pss()}.")
         gc.collect()
         k.clear_session()
