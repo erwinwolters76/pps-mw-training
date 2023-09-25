@@ -1,7 +1,9 @@
+dask
 h5py
 matplotlib
 netcdf4
 numpy
+psutil
 pyproj
 tensorflow
 xarray

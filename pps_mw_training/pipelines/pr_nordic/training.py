@@ -18,14 +18,18 @@ def train(
     model_config_path: Path,
     only_evaluate: bool,
 ):
-    "Run the Nordic precip training pipeline.",
+    "Run the Nordic precip training pipeline."
     train_ds, val_ds, test_ds = training_data.get_training_dataset(
         training_data_path,
         train_fraction,
         validation_fraction,
         test_fraction,
+        settings.BATCH_SIZE,
         settings.MIN_QUALITY,
         settings.MAX_DISTANCE,
+        settings.INPUT_PARAMS,
+        settings.FILL_VALUE_IMAGES,
+        settings.FILL_VALUE_LABELS,
     )
     if not only_evaluate:
         UnetTrainer.train(
@@ -37,7 +41,6 @@ def train(
             settings.QUANTILES,
             train_ds,
             val_ds,
-            batch_size,
             n_epochs,
             settings.FILL_VALUE_IMAGES,
             settings.FILL_VALUE_LABELS,
@@ -50,4 +53,4 @@ def train(
             model_config_path,
         )
     model = UnetTrainer.load(model_config_path / "network_config.json")
-    evaluation.evaluate_model(model, test_ds[0], test_ds[1])
+    evaluation.evaluate_model(model, test_ds)
