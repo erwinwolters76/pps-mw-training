@@ -12,7 +12,11 @@ def random_crop_and_flip(
     image_size,
 ):
     """Apply random crop and flip."""
-    x, y = random_crop(x, y, image_size)
+    x, y = tf.map_fn(
+        lambda elems: random_crop(elems[0], elems[1], image_size),
+        elems=(x, y),
+        fn_output_signature=(tf.float32, tf.float32),
+    )
     x, y = random_flip(x, y)
     return x, y
 
@@ -38,8 +42,8 @@ def random_flip(
 
 
 @tf.function(input_signature=(
-    tf.TensorSpec(shape=[None, None, None, None], dtype=tf.float32),
-    tf.TensorSpec(shape=[None, None, None, 1], dtype=tf.float32),
+    tf.TensorSpec(shape=[None, None, None], dtype=tf.float32),
+    tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
     tf.TensorSpec(shape=(), dtype=tf.int32),
 ))
 def random_crop(
@@ -50,26 +54,26 @@ def random_crop(
     """Random crop of data."""
     x_shape = tf.shape(x)
     y_shape = tf.shape(y)
-    n1 = tf.cast(y_shape[1] / x_shape[1], tf.int32)
-    n2 = tf.cast(y_shape[2] / x_shape[2], tf.int32)
+    n1 = tf.cast(y_shape[0] / x_shape[0], tf.int32)
+    n2 = tf.cast(y_shape[1] / x_shape[1], tf.int32)
     s1 = tf.random.uniform(
         (),
         minval=0,
-        maxval=x_shape[1] - image_size,
+        maxval=x_shape[0] - image_size,
         dtype=tf.dtypes.int32,
     )
     s2 = tf.random.uniform(
         (),
         minval=0,
-        maxval=x_shape[2] - image_size,
+        maxval=x_shape[1] - image_size,
         dtype=tf.dtypes.int32,
     )
     return (
-        x[:, s1: s1 + image_size, s2: s2 + image_size, :],
+        x[s1: s1 + image_size, s2: s2 + image_size, :],
         y[
-            :,
             s1 * n1: (s1 + image_size) * n1,
-            s2 * n2: (s2 + image_size) * n2, :,
+            s2 * n2: (s2 + image_size) * n2,
+            :,
         ],
     )
 

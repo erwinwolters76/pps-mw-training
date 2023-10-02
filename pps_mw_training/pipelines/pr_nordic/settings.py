@@ -12,6 +12,55 @@ TRAINING_DATA_PATH = Path(
 # model parameters
 INPUT_PARAMS: List[Dict[str, Union[str, float, int]]] = [
     {
+        "band": "mw_50",
+        "index": 0,
+        "scale": "linear",
+        "min": 150.,
+        "max": 300.,
+    },
+    {
+        "band": "mw_50",
+        "index": 2,
+        "scale": "linear",
+        "min": 150.,
+        "max": 300.,
+    },
+    {
+        "band": "mw_50",
+        "index": 3,
+        "scale": "linear",
+        "min": 150.,
+        "max": 300.,
+    },
+    {
+        "band": "mw_50",
+        "index": 4,
+        "scale": "linear",
+        "min": 150.,
+        "max": 300.,
+    },
+    {
+        "band": "mw_50",
+        "index": 5,
+        "scale": "linear",
+        "min": 150.,
+        "max": 300.,
+    },
+    {
+        "band": "mw_50",
+        "index": 6,
+        "scale": "linear",
+        "min": 150.,
+        "max": 300.,
+    },
+    {
+        "band": "mw_50",
+        "index": 7,
+        "scale": "linear",
+        "min": 150.,
+        "max": 300.,
+    },
+    {
         "band": "mw_90",
         "index": 0,
         "scale": "linear",
@@ -71,16 +120,16 @@ MIN_QUALITY = 0.8  # radar quality index between 0 (poor) and 1 (good)
 MAX_DISTANCE = 200e3  # max distance [m] from radar
 # training parameters
 N_EPOCHS = 64
-BATCH_SIZE = 16
+BATCH_SIZE = 20
 TRAIN_FRACTION = 0.8
 VALIDATION_FRACTION = 0.15
 TEST_FRACTION = 0.05
 FILL_VALUE_IMAGES = -1.5
 FILL_VALUE_LABELS = -100.0
-IMAGE_SIZE = 32
+IMAGE_SIZE = 64
 # learning rate parameters
-INITIAL_LEARNING_RATE = 0.0001
-FIRST_DECAY_STEPS = 1000
+INITIAL_LEARNING_RATE = 0.00001
+FIRST_DECAY_STEPS = 6500
 T_MUL = 2.0
 M_MUL = 1.0
-ALPHA = 0.0
+ALPHA = 0.1
