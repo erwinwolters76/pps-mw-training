@@ -46,7 +46,7 @@ def train(
             settings.FILL_VALUE_LABELS,
             settings.IMAGE_SIZE,
             settings.INITIAL_LEARNING_RATE,
-            settings.FIRST_DECAY_STEPS_FACTOR,
+            settings.DECAY_STEPS_FACTOR,
             settings.ALPHA,
             model_config_path,
         )
