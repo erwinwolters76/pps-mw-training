@@ -119,7 +119,7 @@ N_LAYERS = 4
 MIN_QUALITY = 0.8  # radar quality index between 0 (poor) and 1 (good)
 MAX_DISTANCE = 200e3  # max distance [m] from radar
 # training parameters
-N_EPOCHS = 64
+N_EPOCHS = 32
 BATCH_SIZE = 20
 TRAIN_FRACTION = 0.8
 VALIDATION_FRACTION = 0.15
@@ -128,8 +128,6 @@ FILL_VALUE_IMAGES = -1.5
 FILL_VALUE_LABELS = -100.0
 IMAGE_SIZE = 64
 # learning rate parameters
-INITIAL_LEARNING_RATE = 0.00001
-FIRST_DECAY_STEPS = 6500
-T_MUL = 2.0
-M_MUL = 1.0
+INITIAL_LEARNING_RATE = 0.0005
+FIRST_DECAY_STEPS_FACTOR = 0.7
 ALPHA = 0.1
