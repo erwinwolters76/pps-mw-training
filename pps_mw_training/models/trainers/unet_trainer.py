@@ -41,9 +41,7 @@ class UnetTrainer(UnetPredictor):
         fill_value_labels: float,
         image_size: int,
         initial_learning_rate: float,
-        first_decay_steps: int,
-        t_mul: float,
-        m_mul: float,
+        decay_steps_factor: float,
         alpha: float,
         output_path: Path,
     ) -> None:
@@ -64,11 +62,11 @@ class UnetTrainer(UnetPredictor):
                 n_layers,
             )
             model.build((None, None, None, n_inputs))
-        learning_rate = tf.keras.optimizers.schedules.CosineDecayRestarts(
+        learning_rate = tf.keras.optimizers.schedules.CosineDecay(
             initial_learning_rate=initial_learning_rate,
-            first_decay_steps=first_decay_steps,
-            t_mul=t_mul,
-            m_mul=m_mul,
+            decay_steps=int(
+                decay_steps_factor * len(training_data) * n_epochs
+            ),
             alpha=alpha,
         )
         model.compile(
