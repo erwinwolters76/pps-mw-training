@@ -16,6 +16,9 @@ class Scaler:
     gain: np.ndarray
     ymin: np.ndarray
     apply_log_scale: Optional[np.ndarray] = None
+    mean: Optional[np.ndarray] = None
+    std: Optional[np.ndarray] = None
+    zscore_normalise: Optional[np.ndarray] = None
 
     def get_xoffset(
         self,
@@ -52,8 +55,11 @@ class Scaler:
         """Apply forward scaling."""
         if idx is not None:
             if self._apply_log_scale(idx):
-                x[x <= 0.] = MIN_VALUE
+                x[x <= 0.0] = MIN_VALUE
                 x = np.log(x)
+            if self.zscore_normalise[idx]:
+                return (x - self.mean[idx]) / self.std[idx]
+
             xoffset = self.get_xoffset(idx)
             ymin = self.get_ymin(idx)
             gain = self.get_gain(idx)
@@ -81,20 +87,34 @@ class Scaler:
         )
 
     @staticmethod
-    def get_min_value(
-        param: Dict[str, Union[str, float]]
+    def get_mean(
+        x: np.ndarray,
     ) -> float:
-        """Get min value from dict."""
-        min_value = cast(float, param["min"])
-        return (
-            math.log(min_value + MIN_VALUE) if param["scale"] == "log"
-            else min_value
-        )
+        """Get mean"""
+        return np.float64(np.nanmean(x))
 
     @staticmethod
-    def get_max_value(
-        param: Dict[str, Union[str, float]]
+    def get_std(
+        x: np.ndarray,
     ) -> float:
+        """Get std"""
+        return np.float64(np.nanstd(x))
+
+    @staticmethod
+    def get_zscore_std_mean(param: Dict[str, Union[str, float]], key):
+        try:
+            return param[key]
+        except Exception:
+            return None
+
+    @staticmethod
+    def get_min_value(param: Dict[str, Union[str, float]]) -> float:
+        """Get min value from dict."""
+        min_value = cast(float, param["min"])
+        return math.log(min_value + MIN_VALUE) if param["scale"] == "log" else min_value
+
+    @staticmethod
+    def get_max_value(param: Dict[str, Union[str, float]]) -> float:
         max_value = cast(float, param["max"])
         return math.log(max_value) if param["scale"] == "log" else max_value
 
@@ -102,19 +122,23 @@ class Scaler:
     def from_dict(
         cls,
         params: List[Dict[str, Union[str, float]]],
-        feature_range: Tuple[float, float] = (-1., 1.),
+        feature_range: Tuple[float, float] = (-1.0, 1.0),
     ) -> "Scaler":
-        """"Get scaler object from dict."""
+        """ "Get scaler object from dict."""
         y_min, y_max = feature_range
         return cls(
             xoffset=np.array([cls.get_min_value(p) for p in params]),
             gain=np.array(
                 [
-                    (y_max - y_min)
-                    / (cls.get_max_value(p) - cls.get_min_value(p))
+                    (y_max - y_min) / (cls.get_max_value(p) - cls.get_min_value(p))
                     for p in params
                 ]
             ),
             ymin=np.full(len(params), y_min),
             apply_log_scale=np.array([p["scale"] == "log" for p in params]),
+            mean=np.array([cls.get_zscore_std_mean(p, "mean") for p in params]),
+            std=np.array([cls.get_zscore_std_mean(p, "std") for p in params]),
+            zscore_normalise=np.array(
+                [cls.get_zscore_std_mean(p, "zscore_normalise") for p in params]
+            ),
         )
