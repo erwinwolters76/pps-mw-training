@@ -6,6 +6,7 @@ from typing import Optional
 
 from pps_mw_training.pipelines.iwp_ici import training as iit
 from pps_mw_training.pipelines.pr_nordic import training as pnt
+from pps_mw_training.pipelines.cloud_base import training as clb
 from pps_mw_training.pipelines.pipeline_type import PipelineType
 
 
@@ -49,10 +50,7 @@ def add_parser(
         "--batchsize",
         dest="batch_size",
         type=int,
-        help=(
-            "Training batch size, "
-            f"default is {batchsize}"
-        ),
+        help=("Training batch size, " f"default is {batchsize}"),
         default=batchsize,
     )
     if db_file is not None:
@@ -73,10 +71,7 @@ def add_parser(
         "--epochs",
         dest="n_epochs",
         type=int,
-        help=(
-            "Number of training epochs, "
-            f"default is {n_epochs}"
-        ),
+        help=("Number of training epochs, " f"default is {n_epochs}"),
         default=n_epochs,
     )
     parser.add_argument(
@@ -84,10 +79,7 @@ def add_parser(
         "--layers",
         dest="n_hidden_layers",
         type=int,
-        help=(
-            "Number of hidden layers, "
-            f"default is {n_hidden_layers}"
-        ),
+        help=("Number of hidden layers, " f"default is {n_hidden_layers}"),
         default=n_hidden_layers,
     )
     if missing_fraction is not None:
@@ -108,10 +100,7 @@ def add_parser(
         "--neurons",
         dest="n_neurons_per_hidden_layer",
         type=int,
-        help=(
-            "Number of hidden layers, "
-            f"default is {n_neurons_per_hidden_layer}"
-        ),
+        help=("Number of hidden layers, " f"default is {n_neurons_per_hidden_layer}"),
         default=n_neurons_per_hidden_layer,
     )
     parser.add_argument(
@@ -128,8 +117,7 @@ def add_parser(
             dest="training_data_path",
             type=str,
             help=(
-                "Path to training data, "
-                f"default is {training_data_path.as_posix()}"
+                "Path to training data, " f"default is {training_data_path.as_posix()}"
             ),
             default=training_data_path.as_posix(),
         )
@@ -181,10 +169,8 @@ def add_parser(
 
 
 def cli(args_list: list[str] = argv[1:]) -> None:
-    parser = argparse.ArgumentParser(
-        description="""Run the pps-mw-training app."""
-    )
-    subparsers = parser.add_subparsers(dest='pipeline_type')
+    parser = argparse.ArgumentParser(description="""Run the pps-mw-training app.""")
+    subparsers = parser.add_subparsers(dest="pipeline_type")
     add_parser(
         subparsers,
         PipelineType.PR_NORDIC,
@@ -203,6 +189,24 @@ def cli(args_list: list[str] = argv[1:]) -> None:
         pnt.settings.TEST_FRACTION,
         pnt.settings.MODEL_CONFIG_PATH,
         training_data_path=pnt.settings.TRAINING_DATA_PATH,
+    )
+    add_parser(
+        subparsers,
+        PipelineType.CLOUD_BASE,
+        (
+            "Run the cloud_base training pipeline for the training "
+            "of a U-Net convolutional and quantile regression neural "
+            "network, for the retrieval of cloud base heights from VGAC data"
+        ),
+        clb.settings.N_LAYERS,
+        clb.settings.N_FEATURES,
+        clb.settings.BATCH_SIZE,
+        clb.settings.N_EPOCHS,
+        clb.settings.TRAIN_FRACTION,
+        clb.settings.VALIDATION_FRACTION,
+        clb.settings.TEST_FRACTION,
+        clb.settings.MODEL_CONFIG_PATH,
+        training_data_path=clb.settings.TRAINING_DATA_PATH,
     )
     add_parser(
         subparsers,
@@ -230,6 +234,19 @@ def cli(args_list: list[str] = argv[1:]) -> None:
     pipeline_type = PipelineType(args.pipeline_type)
     if pipeline_type is PipelineType.PR_NORDIC:
         pnt.train(
+            args.n_hidden_layers,
+            args.n_neurons_per_hidden_layer,
+            Path(args.training_data_path),
+            args.train_fraction,
+            args.validation_fraction,
+            args.test_fraction,
+            args.batch_size,
+            args.n_epochs,
+            Path(args.model_config_path),
+            args.only_evaluate,
+        )
+    elif pipeline_type is PipelineType.CLOUD_BASE:
+        clb.train(
             args.n_hidden_layers,
             args.n_neurons_per_hidden_layer,
             Path(args.training_data_path),
