@@ -1,11 +1,13 @@
 import tensorflow as tf  # type: ignore
 
 
-@tf.function(input_signature=(
-    tf.TensorSpec(shape=[None, None, None, None], dtype=tf.float32),
-    tf.TensorSpec(shape=[None, None, None, 1], dtype=tf.float32),
-    tf.TensorSpec(shape=(), dtype=tf.int32),
-))
+@tf.function(
+    input_signature=(
+        tf.TensorSpec(shape=[None, None, None, None], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, None, 1], dtype=tf.float32),
+        tf.TensorSpec(shape=(), dtype=tf.int32),
+    )
+)
 def random_crop_and_flip(
     x,
     y,
@@ -21,10 +23,12 @@ def random_crop_and_flip(
     return x, y
 
 
-@tf.function(input_signature=(
-    tf.TensorSpec(shape=[None, None, None, None], dtype=tf.float32),
-    tf.TensorSpec(shape=[None, None, None, 1], dtype=tf.float32),
-))
+@tf.function(
+    input_signature=(
+        tf.TensorSpec(shape=[None, None, None, None], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, None, 1], dtype=tf.float32),
+    )
+)
 def random_flip(
     x,
     y,
@@ -41,11 +45,13 @@ def random_flip(
     return x, y
 
 
-@tf.function(input_signature=(
-    tf.TensorSpec(shape=[None, None, None], dtype=tf.float32),
-    tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
-    tf.TensorSpec(shape=(), dtype=tf.int32),
-))
+@tf.function(
+    input_signature=(
+        tf.TensorSpec(shape=[None, None, None], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
+        tf.TensorSpec(shape=(), dtype=tf.int32),
+    )
+)
 def random_crop(
     x,
     y,
@@ -69,10 +75,10 @@ def random_crop(
         dtype=tf.dtypes.int32,
     )
     return (
-        x[s1: s1 + image_size, s2: s2 + image_size, :],
+        x[s1 : s1 + image_size, s2 : s2 + image_size, :],
         y[
-            s1 * n1: (s1 + image_size) * n1,
-            s2 * n2: (s2 + image_size) * n2,
+            s1 * n1 : (s1 + image_size) * n1,
+            s2 * n2 : (s2 + image_size) * n2,
             :,
         ],
     )
@@ -92,7 +98,7 @@ def set_missing_data(
                 minval=0,
                 maxval=1,
             ),
-            missing_fraction
+            missing_fraction,
         ),
         x,
         fill_value,
