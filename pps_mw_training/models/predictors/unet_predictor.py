@@ -16,6 +16,7 @@ class UnetPredictor:
     Object for handling the loading and processing of a quantile
     regression U-Net convolutional neural network model.
     """
+
     model: UnetModel
     pre_scaler: Scaler
     input_params: list[dict[str, Any]]
@@ -39,6 +40,7 @@ class UnetPredictor:
             config["n_unet_blocks"],
             config["n_features"],
             config["n_layers"],
+            # config["super_resolution"]
         )
         model.build((None, None, None, n_inputs))
         model.load_weights(config["model_weights"])
@@ -62,7 +64,8 @@ class UnetPredictor:
                 pre_scaler.apply(
                     data[p["band"]][:, :, :, p["index"]].values,
                     idx,
-                ) for idx, p in enumerate(input_params)
+                )
+                for idx, p in enumerate(input_params)
             ],
             axis=3,
         )

@@ -1,9 +1,17 @@
 import gc
 import os
+from enum import Enum
 import psutil
 
 from tensorflow.keras import backend as k  # type: ignore
 from tensorflow.keras.callbacks import Callback  # type: ignore
+
+
+class AugmentationType(Enum):
+    "type of augmentation allowed"
+    CROP = "crop"
+    FLIP = "flip"
+    CROP_AND_FLIP = "crop_and_flip"
 
 
 class MemoryUsageCallback(Callback):
