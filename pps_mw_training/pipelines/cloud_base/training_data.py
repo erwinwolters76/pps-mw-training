@@ -15,7 +15,8 @@ from pps_mw_training.utils.scaler import Scaler
 def _load_data(
     data_files: np.ndarray,
     input_params: str,
-    fill_value: float,
+    fill_value_input: float,
+    fill_value_label: float,
 ) -> list[np.ndarray]:
     """Load, scale, and filter data."""
 
@@ -38,8 +39,11 @@ def _load_data(
     )
 
     label_data = all_data["cloud_base"][:, :, :].values
+    input_data[~np.isfinite(input_data)] = fill_value_input
+    label_data[~np.isfinite(label_data)] = fill_value_label
+    label_data[label_data < 0] = fill_value_label
 
-    return [input_data, label_data]
+    return [np.float32(input_data), np.float32(np.expand_dims(label_data, axis=3))]
 
 
 @tf.function(
@@ -47,13 +51,14 @@ def _load_data(
         tf.TensorSpec(shape=(None,), dtype=tf.string),
         tf.TensorSpec(shape=(), dtype=tf.string),
         tf.TensorSpec(shape=(), dtype=tf.float32),
+        tf.TensorSpec(shape=(), dtype=tf.float32),
     )
 )
-def load_data(matched_files, input_params, fill_value):
+def load_data(matched_files, input_params, fill_value_input, fill_value_label):
     """Load netcdf dataset."""
     return tf.numpy_function(
         func=_load_data,
-        inp=[matched_files, input_params, fill_value],
+        inp=[matched_files, input_params, fill_value_input, fill_value_label],
         Tout=[tf.float32, tf.float32],
     )
 
@@ -62,17 +67,22 @@ def _get_training_dataset(
     matched_files: list[Path],
     batch_size: int,
     input_params: str,
-    fill_value: float,
+    fill_value_input: float,
+    fill_value_label: float,
 ) -> list[tf.data.Dataset]:
     """Get training dataset."""
+
+    print(matched_files)
     ds = tf.data.Dataset.from_tensor_slices([f.as_posix() for f in matched_files])
     matched_files = [f.as_posix() for f in matched_files]
     ds = ds.batch(batch_size)
+
     ds = ds.map(
         lambda x: load_data(
             x,
             tf.constant(input_params),
-            tf.constant(fill_value),
+            tf.constant(fill_value_input),
+            tf.constant(fill_value_label),
         ),
     )
     return ds
@@ -118,40 +128,26 @@ def get_training_dataset(
     test_fraction: float,
     batch_size: int,
     input_params: list[dict[str, Any]],
-    fill_value: float,
+    fill_value_input: float,
+    fill_value_label: float,
 ) -> list[tf.data.Dataset]:
     """Get training dataset."""
 
     # assert train_fraction + validation_fraction + test_fraction == 1
-    input_files = list((training_data_path).glob("*.nc*"))
+    input_files = list((training_data_path).glob("*.nc*"))[:250]
     s = len(input_files)
 
     train_size = int(s * train_fraction)
     validation_size = int(s * validation_fraction)
 
-    input_params = update_std_mean(
-        input_files[0 : train_size + validation_size], input_params
-    )
-    params = json.dumps(input_params)
-
-    # ds = _get_training_dataset(
-    #     input_files,
-    #     batch_size,
-    #     params,
-    #     fill_value,
+    # input_params = update_std_mean(
+    #     input_files[0 : train_size + validation_size], input_params
     # )
 
-    # return ds
-
-    # train_size = int(s * train_fraction)
-    # validation_size = int(s * validation_fraction)
+    params = json.dumps(input_params)
+    print(train_size, validation_size)
     return [
-        _get_training_dataset(
-            f,
-            batch_size,
-            params,
-            fill_value,
-        )
+        _get_training_dataset(f, batch_size, params, fill_value_input, fill_value_label)
         for f in [
             input_files[0:train_size],
             input_files[train_size : train_size + validation_size],
