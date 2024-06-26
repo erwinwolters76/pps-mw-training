@@ -4,11 +4,11 @@ import os
 
 from pps_mw_training.models.trainers.utils import AugmentationType
 
-MODEL_CONFIG_PATH = Path(os.environ.get("MODEL_CONFIG_CLOUD_BASE", "/tmp"))
+MODEL_CONFIG_PATH = Path(os.environ.get("MODEL_CONFIG_CLOUD_BASE", "/home/sm_indka/temp/"))
 TRAINING_DATA_PATH = Path(
     os.environ.get(
         "TRAINING_DATA_PATH_CLOUD_BASE",
-        "/home/a002602/data/cloud_base/collocated_data/",
+        "/nobackup/smhid20/users/sm_indka/collocated_data/"
     )
 )
 # model parameters
@@ -302,14 +302,14 @@ INPUT_PARAMS: List[Dict[str, Union[str, float, int]]] = [
     },
 ]
 QUANTILES = [0.005, 0.025, 0.150, 0.250, 0.500, 0.750, 0.835, 0.975, 0.995]
-N_UNET_BASE = 8
+N_UNET_BASE = 16
 N_UNET_BLOCKS = 4
 N_FEATURES = 16
 N_LAYERS = 4
 
 # training parameters
-N_EPOCHS = 100
-BATCH_SIZE = 7
+N_EPOCHS = 20
+BATCH_SIZE = 10
 TRAIN_FRACTION = 0.8
 VALIDATION_FRACTION = 0.15
 TEST_FRACTION = 0.05
@@ -317,7 +317,7 @@ FILL_VALUE_IMAGES = -1.5
 FILL_VALUE_LABELS = -100.0
 IMAGE_SIZE = 32
 # learning rate parameters
-INITIAL_LEARNING_RATE = 0.0005
+INITIAL_LEARNING_RATE = 0.01
 DECAY_STEPS_FACTOR = 0.7
 ALPHA = 0.1
 
