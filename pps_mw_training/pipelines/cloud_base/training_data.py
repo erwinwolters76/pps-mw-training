@@ -24,6 +24,13 @@ def _load_data(
         [f.decode("utf-8") for f in data_files],
         combine="nested",
         concat_dim="nscene",
+    )
+
+    all_data = all_data.sel(
+        {
+            "npix": all_data["nscan"].values[8:-8],
+            "nscan": all_data["npix"].values[8:-8],
+        }
     ).load()
 
     input_params = json.loads(input_params)
@@ -42,6 +49,7 @@ def _load_data(
     input_data[~np.isfinite(input_data)] = fill_value_input
     label_data[~np.isfinite(label_data)] = fill_value_label
     label_data[label_data < 0] = fill_value_label
+    label_data[label_data > 4500] = fill_value_label
 
     return [np.float32(input_data), np.float32(np.expand_dims(label_data, axis=3))]
 
