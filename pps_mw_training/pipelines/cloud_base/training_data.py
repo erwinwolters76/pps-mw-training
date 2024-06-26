@@ -24,7 +24,7 @@ def _load_data(
         [f.decode("utf-8") for f in data_files],
         combine="nested",
         concat_dim="nscene",
-    ).load()
+    )
 
     input_params = json.loads(input_params)
 
@@ -132,9 +132,9 @@ def get_training_dataset(
     fill_value_label: float,
 ) -> list[tf.data.Dataset]:
     """Get training dataset."""
-
+    print(training_data_path)
     # assert train_fraction + validation_fraction + test_fraction == 1
-    input_files = list((training_data_path).glob("*.nc*"))[:250]
+    input_files = list((training_data_path).glob("*.nc*"))[:500]
     s = len(input_files)
 
     train_size = int(s * train_fraction)
