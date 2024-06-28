@@ -100,31 +100,32 @@ def update_std_mean(
     input_files: list[Path], input_params: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
     """calculate std and mean for the input dataset to normalise"""
-    all_data = xr.open_mfdataset(
-        [f for f in input_files],
-        combine="nested",
-        concat_dim="nscene",
-    )
 
-    input_data = np.stack(
-        [all_data[p["name"]][:, :, :].values for idx, p in enumerate(input_params)],
-        axis=3,
-    )
+    all_dict = {}
+    with xr.open_dataset(input_files[0]) as ds:
+        for key in ds.keys():
+            all_dict[key] = {"n": 0, "x": 0, "x2": 0}
 
-    std = np.stack(
-        [Scaler.get_std(input_data[:, :, :, idx]) for idx in range(input_data.shape[3])]
-    )
-    mean = np.stack(
-        [
-            Scaler.get_mean(input_data[:, :, :, idx])
-            for idx in range(input_data.shape[3])
-        ]
-    )
+    for file in input_files:
+        with xr.open_dataset(file) as ds:
+            ds = ds.sel(
+                {
+                    "npix": ds["nscan"].values[8:-8],
+                    "nscan": ds["npix"].values[8:-8],
+                }
+            )
+            for key in ds.keys():
+                all_dict[key]["n"] += (np.isfinite(ds[key].values)).size
+                all_dict[key]["x"] += np.nansum(ds[key].values)
+                all_dict[key]["x2"] += np.nansum(ds[key].values ** 2)
 
-    for idx, p in enumerate(input_params):
-        p["std"] = std[idx]
-    for idx, p in enumerate(input_params):
-        p["mean"] = mean[idx]
+    for p in input_params:
+        key = p["name"]
+        p["std"] = np.sqrt(
+            (all_dict[key]["x2"] / all_dict[key]["n"])
+            - (all_dict[key]["x"] / all_dict[key]["n"]) ** 2
+        )
+        p["mean"] = all_dict[key]["x"] / all_dict[key]["n"]
 
     return input_params
 
@@ -148,9 +149,9 @@ def get_training_dataset(
     train_size = int(s * train_fraction)
     validation_size = int(s * validation_fraction)
 
-    # input_params = update_std_mean(
-    #     input_files[0 : train_size + validation_size], input_params
-    # )
+    input_params = update_std_mean(
+        input_files[0 : train_size + validation_size], input_params
+    )
 
     params = json.dumps(input_params)
     print(train_size, validation_size)
