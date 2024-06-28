@@ -20,30 +20,38 @@ def _load_data(
 ) -> list[np.ndarray]:
     """Load, scale, and filter data."""
 
-    all_data = xr.open_mfdataset(
+    with  xr.open_mfdataset(
         [f.decode("utf-8") for f in data_files],
         combine="nested",
         concat_dim="nscene",
-    )
+    ) as all_data:
 
-    input_params = json.loads(input_params)
+        all_data = all_data.sel(
+            {
+                "npix": all_data["nscan"].values[8:-8],
+                "nscan": all_data["npix"].values[8:-8],
+            }
+        ).load()
 
-    scaler = Scaler.from_dict(input_params)
+        input_params = json.loads(input_params)
 
-    input_data = np.stack(
-        [
-            scaler.apply(all_data[p["name"]][:, :, :].values, idx)
-            for idx, p in enumerate(input_params)
-        ],
-        axis=3,
-    )
+        scaler = Scaler.from_dict(input_params)
 
-    label_data = all_data["cloud_base"][:, :, :].values
-    input_data[~np.isfinite(input_data)] = fill_value_input
-    label_data[~np.isfinite(label_data)] = fill_value_label
-    label_data[label_data < 0] = fill_value_label
+        input_data = np.stack(
+            [
+                scaler.apply(all_data[p["name"]][:, :, :].values, idx)
+                for idx, p in enumerate(input_params)
+            ],
+            axis=3,
+        )
 
-    return [np.float32(input_data), np.float32(np.expand_dims(label_data, axis=3))]
+        label_data = all_data["cloud_base"][:, :, :].values
+        input_data[~np.isfinite(input_data)] = fill_value_input
+        label_data[~np.isfinite(label_data)] = fill_value_label
+        label_data[label_data < 0] = fill_value_label
+        label_data[label_data > 4500] = fill_value_label
+
+        return [np.float32(input_data), np.float32(np.expand_dims(label_data, axis=3))]
 
 
 @tf.function(
@@ -134,7 +142,7 @@ def get_training_dataset(
     """Get training dataset."""
     print(training_data_path)
     # assert train_fraction + validation_fraction + test_fraction == 1
-    input_files = list((training_data_path).glob("*.nc*"))[:500]
+    input_files = list((training_data_path).glob("*.nc*"))[:]
     s = len(input_files)
 
     train_size = int(s * train_fraction)
