@@ -3,6 +3,7 @@ from typing import Any, Optional
 import datetime as dt
 import json
 import re
+import random
 
 import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
@@ -22,16 +23,18 @@ def _load_data(
 
     with  xr.open_mfdataset(
         [f.decode("utf-8") for f in data_files],
+        #[f for f in data_files],
         combine="nested",
         concat_dim="nscene",
     ) as all_data:
 
         all_data = all_data.sel(
             {
-                "npix": all_data["nscan"].values[8:-8],
-                "nscan": all_data["npix"].values[8:-8],
+                "npix": all_data["npix"].values[8:-8],
+                "nscan": all_data["nscan"].values[8:-8],
             }
         ).load()
+
 
         input_params = json.loads(input_params)
 
@@ -46,10 +49,11 @@ def _load_data(
         )
 
         label_data = all_data["cloud_base"][:, :, :].values
+        #label_data = all_data["cloud_top"][:, :, :].values
         input_data[~np.isfinite(input_data)] = fill_value_input
         label_data[~np.isfinite(label_data)] = fill_value_label
         label_data[label_data < 0] = fill_value_label
-        label_data[label_data > 4500] = fill_value_label
+        label_data[label_data >= 6000] = fill_value_label
 
         return [np.float32(input_data), np.float32(np.expand_dims(label_data, axis=3))]
 
@@ -115,7 +119,7 @@ def update_std_mean(
                 }
             )
             for key in ds.keys():
-                all_dict[key]["n"] += (np.isfinite(ds[key].values)).size
+                all_dict[key]["n"] += np.sum((np.isfinite(ds[key].values)))
                 all_dict[key]["x"] += np.nansum(ds[key].values)
                 all_dict[key]["x2"] += np.nansum(ds[key].values ** 2)
 
@@ -143,12 +147,13 @@ def get_training_dataset(
     """Get training dataset."""
     print(training_data_path)
     # assert train_fraction + validation_fraction + test_fraction == 1
-    input_files = list((training_data_path).glob("*.nc*"))[:]
-    s = len(input_files)
+    input_files = list((training_data_path).glob("cnn_data*.nc*"))[:5000]
 
+    s = len(input_files)
+    print(s, len(input_files))
     train_size = int(s * train_fraction)
     validation_size = int(s * validation_fraction)
-
+    print(train_size, validation_size, s)
     input_params = update_std_mean(
         input_files[0 : train_size + validation_size], input_params
     )
