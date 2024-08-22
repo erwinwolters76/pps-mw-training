@@ -15,6 +15,7 @@ class Scaler:
     xoffset: np.ndarray
     gain: np.ndarray
     ymin: np.ndarray
+    ymax: np.ndarray
     apply_log_scale: Optional[np.ndarray] = None
     mean: Optional[np.ndarray] = None
     std: Optional[np.ndarray] = None
@@ -41,6 +42,14 @@ class Scaler:
         """Get ymin."""
         return self.ymin if self.ymin.size == 1 else self.ymin[idx]
 
+    def get_ymax(
+        self,
+        idx: int,
+    ) -> float:
+        """Get ymax."""
+        return self.ymax if self.ymax.size == 1 else self.ymax[idx]        
+
+
     def _apply_log_scale(self, idx) -> bool:
         """Check if log scaling should be applied."""
         if self.apply_log_scale is not None:
@@ -60,10 +69,15 @@ class Scaler:
             if self.zscore_normalise[idx]:
                 return (x - self.mean[idx]) / self.std[idx]
 
-            xoffset = self.get_xoffset(idx)
+            # xoffset = self.get_xoffset(idx)
+            # ymin = self.get_ymin(idx)
+            # gain = self.get_gain(idx)
+            # return ymin + gain * (x - xoffset)
+
             ymin = self.get_ymin(idx)
-            gain = self.get_gain(idx)
-            return ymin + gain * (x - xoffset)
+            ymax = self.get_ymax(idx)
+            return (x-ymin)/(ymax-ymin)
+
         return np.column_stack(
             [self.apply(x[:, idx], idx) for idx in range(x.shape[1])]
         )
@@ -135,6 +149,7 @@ class Scaler:
                 ]
             ),
             ymin=np.full(len(params), y_min),
+            ymax=np.full(len(params), y_max),
             apply_log_scale=np.array([p["scale"] == "log" for p in params]),
             mean=np.array([cls.get_zscore_std_mean(p, "mean") for p in params]),
             std=np.array([cls.get_zscore_std_mean(p, "std") for p in params]),

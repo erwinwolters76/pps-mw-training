@@ -62,21 +62,20 @@ class UnetPredictor:
         data = np.stack(
             [
                 pre_scaler.apply(
-                    data[p["band"]][:, :, :, p["index"]].values,
-                    idx,
-                )
+                    data[p["name"]][:, :, :].values, idx)
                 for idx, p in enumerate(input_params)
             ],
             axis=3,
         )
         data[~np.isfinite(data)] = fill_value
         return data
-
+    
     def predict(
         self,
         input_data: Dataset,
     ) -> np.ndarray:
         """Apply the trained neural network for a retrieval purpose."""
+        print("applying scaling")
         prescaled = self.prescale(
             input_data, self.pre_scaler, self.input_params, self.fill_value
         )

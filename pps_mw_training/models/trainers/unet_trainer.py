@@ -87,6 +87,16 @@ class UnetTrainer(UnetPredictor):
                 fill_value=fill_value_labels,
             ),
         )
+        # model.compile(
+        #     optimizer=tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9, nesterov=True),
+        #     loss=lambda y_true, y_pred: quantile_loss(
+        #         1,
+        #         quantiles,
+        #         y_true,
+        #         y_pred,
+        #         fill_value=fill_value_labels,
+        #     ),
+        # )
         output_path.mkdir(parents=True, exist_ok=True)
         weights_file = output_path / "weights.h5"
 
