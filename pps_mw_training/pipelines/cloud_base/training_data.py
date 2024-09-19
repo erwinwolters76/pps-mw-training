@@ -4,11 +4,11 @@ import datetime as dt
 import json
 import re
 import random
-
+import pickle
 import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 import xarray as xr  # type: ignore
-
+from scipy.ndimage import rotate
 
 from pps_mw_training.utils.scaler import Scaler
 
@@ -53,9 +53,25 @@ def _load_data(
         input_data[~np.isfinite(input_data)] = fill_value_input
         label_data[~np.isfinite(label_data)] = fill_value_label
         label_data[label_data < 0] = fill_value_label
-        label_data[label_data >= 6000] = fill_value_label
+        label_data[label_data >= 12000] = 12000.0
+
+        label_data[label_data > 0]  = (label_data[label_data > 0] - 0.)/(12000. - 0.)
+        input_data, label_data = rotate_data(input_data, label_data)
 
         return [np.float32(input_data), np.float32(np.expand_dims(label_data, axis=3))]
+
+
+def rotate_data(xtrain, ytrain):
+    xrotated = np.empty(xtrain.shape)
+    yrotated = np.empty(ytrain.shape)
+    batchsize = xtrain.shape[0]
+    nchannels = xtrain.shape[-1]
+    for i in range(batchsize):
+        angle = random.choice([0., 90., 180., 270.])
+        yrotated[i, :, :] = rotate(ytrain[i, :, :], angle, reshape=False)
+        for j in range(nchannels):
+            xrotated[i, :, :, j] = rotate(xtrain[i, :, :, j], angle, reshape=False)
+    return xrotated, yrotated
 
 
 @tf.function(
@@ -147,19 +163,38 @@ def get_training_dataset(
     """Get training dataset."""
     print(training_data_path)
     # assert train_fraction + validation_fraction + test_fraction == 1
-    input_files = list((training_data_path).glob("cnn_data*.nc*"))[:5000]
+    input_files = list((training_data_path).glob("cnn_data*.nc*"))[:22000]
 
     s = len(input_files)
-    print(s, len(input_files))
     train_size = int(s * train_fraction)
     validation_size = int(s * validation_fraction)
-    print(train_size, validation_size, s)
-    input_params = update_std_mean(
-        input_files[0 : train_size + validation_size], input_params
-    )
+    # input_params = update_std_mean(
+    #     input_files[0 : train_size + validation_size], input_params
+    # )
+    with open("/home/sm_indka/pps-mw-training/scripts/input_params.pickle", "rb") as f:
+        input_params_all = pickle.load(f)
 
-    params = json.dumps(input_params)
-    print(train_size, validation_size)
+    # Create a dictionary from list2 for easy lookup by name
+    dict2 = {item['name']: item for item in input_params_all}
+
+    # Create the new list by merging the relevant fields
+    new_list = []
+    for item in input_params:
+        name = item['name']
+        if name in dict2:
+            # Create a new dictionary combining fields from list1 and std, mean from list2
+            new_item = {
+                "name": item["name"],
+                "scale": item["scale"],
+                "min": item["min"],
+                "max": item["max"],
+                "zscore_normalise": item["zscore_normalise"],
+                "std": dict2[name]["std"],
+                "mean": dict2[name]["mean"]
+            }
+            new_list.append(new_item)
+
+    params = json.dumps(new_list)
     return [
         _get_training_dataset(f, batch_size, params, fill_value_input, fill_value_label)
         for f in [
