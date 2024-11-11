@@ -54,6 +54,7 @@ class UnetModel(keras.Model):
         # if self.super_resolution:
         #     x = self.up_sampling_layer(x)
         return self.output_block(x)
+        return self.output_block(inputs)
 
     def build_graph(self, image_size: int, n_inputs: int):
         x = keras.Input(shape=(image_size, image_size, n_inputs))
