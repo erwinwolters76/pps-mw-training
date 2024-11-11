@@ -61,7 +61,7 @@ class UnetTrainer(UnetPredictor):
                 n_features,
                 n_layers,
             )
-            model.build((None, None, None, n_inputs))
+            model.build_graph(image_size, n_inputs)
         learning_rate = tf.keras.optimizers.schedules.CosineDecay(
             initial_learning_rate=initial_learning_rate,
             decay_steps=int(
@@ -76,7 +76,7 @@ class UnetTrainer(UnetPredictor):
             ),
         )
         output_path.mkdir(parents=True, exist_ok=True)
-        weights_file = output_path / "weights.h5"
+        weights_file = output_path / "pr_nordic.weights.h5"
         training_data = training_data.map(
             lambda x, y: random_crop_and_flip(x, y, tf.constant(image_size))
         )
@@ -108,6 +108,7 @@ class UnetTrainer(UnetPredictor):
                         "n_unet_blocks": n_unet_blocks,
                         "n_features": n_features,
                         "n_layers": n_layers,
+                        "image_size": image_size,
                         "quantiles": quantiles,
                         "fill_value": fill_value_images,
                         "model_weights": weights_file.as_posix(),
