@@ -19,7 +19,7 @@ class Scaler:
     apply_log_scale: Optional[np.ndarray] = None
     mean: Optional[np.ndarray] = None
     std: Optional[np.ndarray] = None
-    zscore_normalise: Optional[np.ndarray] = None
+    zscore_normalise: Union[np.ndarray, bool] = False
 
     def get_xoffset(
         self,
@@ -47,8 +47,7 @@ class Scaler:
         idx: int,
     ) -> float:
         """Get ymax."""
-        return self.ymax if self.ymax.size == 1 else self.ymax[idx]        
-
+        return self.ymax if self.ymax.size == 1 else self.ymax[idx]
 
     def _apply_log_scale(self, idx) -> bool:
         """Check if log scaling should be applied."""
@@ -66,7 +65,11 @@ class Scaler:
             if self._apply_log_scale(idx):
                 x[x <= 0.0] = MIN_VALUE
                 x = np.log(x)
-            if self.zscore_normalise[idx]:
+            if self.zscore_normalise is not None:
+                if self.mean is None or self.std is None:
+                    raise ValueError(
+                        "Mean and std must be provided to run z_score normalisation"
+                    )
                 return (x - self.mean[idx]) / self.std[idx]
 
             # xoffset = self.get_xoffset(idx)
@@ -76,7 +79,7 @@ class Scaler:
 
             ymin = self.get_ymin(idx)
             ymax = self.get_ymax(idx)
-            return (x-ymin)/(ymax-ymin)
+            return (x - ymin) / (ymax - ymin)
 
         return np.column_stack(
             [self.apply(x[:, idx], idx) for idx in range(x.shape[1])]
@@ -125,7 +128,11 @@ class Scaler:
     def get_min_value(param: Dict[str, Union[str, float]]) -> float:
         """Get min value from dict."""
         min_value = cast(float, param["min"])
-        return math.log(min_value + MIN_VALUE) if param["scale"] == "log" else min_value
+        return (
+            math.log(min_value + MIN_VALUE)
+            if param["scale"] == "log"
+            else min_value
+        )
 
     @staticmethod
     def get_max_value(param: Dict[str, Union[str, float]]) -> float:
@@ -144,7 +151,8 @@ class Scaler:
             xoffset=np.array([cls.get_min_value(p) for p in params]),
             gain=np.array(
                 [
-                    (y_max - y_min) / (cls.get_max_value(p) - cls.get_min_value(p))
+                    (y_max - y_min)
+                    / (cls.get_max_value(p) - cls.get_min_value(p))
                     for p in params
                 ]
             ),
