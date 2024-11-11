@@ -60,7 +60,8 @@ class UpsamplingBlock(layers.Layer):
         super().__init__()
         self.upsample = UpSampling2D()
         self.reduce_channels = layers.Conv2D(
-            channels_in // 2, 1,
+            channels_in // 2,
+            1,
             padding="same",
             input_shape=(None, None, channels_in),
         )
@@ -87,8 +88,16 @@ class MlpBlock(keras.Sequential):
         super().__init__()
         for _ in range(n_layers - 1):
             self.add(
-                layers.Conv2D(n_features, 1, padding="same", use_bias=False)
+                layers.Conv2D(
+                    n_features,
+                    1,
+                    padding="same",
+                    use_bias=False,
+                    kernel_initializer="he_normal",
+                )
             )
             self.add(layers.Activation(keras.activations.relu))
             # self.add(layers.Dropout(0.5)) # added dropout layer here
-        self.add(layers.Conv2D(n_outputs, 1, padding="same"))
+        self.add(
+            layers.Conv2D(n_outputs, 1, padding="same", kernel_initializer="he_normal")
+        )
