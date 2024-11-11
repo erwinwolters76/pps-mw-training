@@ -4,7 +4,7 @@ from typing import cast, Any, List, Dict
 import json
 
 import tensorflow as tf  # type: ignore
-from tensorflow.keras.callbacks import ModelCheckpoint  # type: ignore
+from keras.callbacks import ModelCheckpoint  # type: ignore
 from xarray import Dataset  # type: ignore
 
 from pps_mw_training.models.mlp_model import MlpModel
@@ -74,7 +74,7 @@ class MlpTrainer(MlpPredictor):
             ),
         )
         output_path.mkdir(parents=True, exist_ok=True)
-        weights_file = output_path / "weights.h5"
+        weights_file = output_path / "iwp_ici.weights.h5"
         history = model.fit(
             cls.prepare_data(
                 input_parameters,

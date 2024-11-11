@@ -1,6 +1,6 @@
 import tensorflow as tf  # type: ignore
 from tensorflow import keras
-from tensorflow.keras import layers  # type: ignore
+from keras import layers  # type: ignore
 
 from pps_mw_training.utils.layers import SymmetricPadding, UpSampling2D
 

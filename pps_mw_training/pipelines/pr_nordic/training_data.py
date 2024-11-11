@@ -106,8 +106,8 @@ def _load_data(
         ~np.isfinite(radar_data.dbz.values)
     ] = fill_value_radar
     return [
-        mw_data,
-        np.expand_dims(radar_data.dbz.values, axis=3),
+        mw_data.astype(np.float32),
+        np.expand_dims(radar_data.dbz.values, axis=3).astype(np.float32),
     ]
 
 
@@ -190,23 +190,24 @@ def get_training_dataset(
     fill_value_radar: float,
 ) -> list[tf.data.Dataset]:
     """Get training dataset."""
-    params = json.dumps(input_params)
+    assert train_fraction + validation_fraction + test_fraction == 1
+
     sat_files = list((training_data_path / "satellite").glob('*.nc*'))
     radar_files = list((training_data_path / "radar").glob('*.nc*'))
     files = match_files(sat_files, radar_files)
-    s = len(files)
-    assert train_fraction + validation_fraction + test_fraction == 1
-    train_size = int(s * train_fraction)
-    validation_size = int(s * validation_fraction)
+
+    train_size = int(len(files) * train_fraction)
+    validation_size = int(len(files) * validation_fraction)
+
     return [
         _get_training_dataset(
             f,
             batch_size,
             qi_min,
             distance_max,
-            params,
-            fill_value_mw,
-            fill_value_radar,
+            params=json.dumps(input_params),
+            fill_value_mw=fill_value_mw,
+            fill_value_radar=fill_value_radar,
         ) for f in [
             files[0: train_size],
             files[train_size: train_size + validation_size],
