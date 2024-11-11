@@ -9,11 +9,15 @@ from tensorflow import keras
 
 from pps_mw_training.models.unet_model import UnetModel
 from pps_mw_training.models.predictors.unet_predictor import UnetPredictor
-from pps_mw_training.models.trainers.utils import MemoryUsageCallback, AugmentationType
+from pps_mw_training.models.trainers.utils import (
+    MemoryUsageCallback,
+    AugmentationType,
+)
 from pps_mw_training.utils.augmentation import (
     random_crop_and_flip,
     random_crop,
     random_flip,
+    random_crop_and_flip_swath_centered,
 )
 from pps_mw_training.utils.loss_function import quantile_loss
 from pps_mw_training.utils.scaler import Scaler
@@ -78,7 +82,9 @@ class UnetTrainer(UnetPredictor):
             alpha=alpha,
         )
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+            optimizer=tf.keras.optimizers.Adam(
+                learning_rate=learning_rate,
+            ),
             loss=lambda y_true, y_pred: quantile_loss(
                 1,
                 quantiles,
@@ -87,22 +93,14 @@ class UnetTrainer(UnetPredictor):
                 fill_value=fill_value_labels,
             ),
         )
-        # model.compile(
-        #     optimizer=tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9, nesterov=True),
-        #     loss=lambda y_true, y_pred: quantile_loss(
-        #         1,
-        #         quantiles,
-        #         y_true,
-        #         y_pred,
-        #         fill_value=fill_value_labels,
-        #     ),
-        # )
         output_path.mkdir(parents=True, exist_ok=True)
         weights_file = output_path / "weights.h5"
 
         if augmentation_type.value == "flip":
             training_data = training_data.map(lambda x, y: random_flip(x, y))
-            validation_data = validation_data.map(lambda x, y: random_flip(x, y))
+            validation_data = validation_data.map(
+                lambda x, y: random_flip(x, y)
+            )
 
         if augmentation_type.value == "crop":
             training_data = training_data.map(
@@ -118,9 +116,19 @@ class UnetTrainer(UnetPredictor):
             validation_data = validation_data.map(
                 lambda x, y: random_crop_and_flip(x, y, tf.constant(image_size))
             )
-
+        if augmentation_type.value == "crop_and_flip_swath_centered":
+            training_data = training_data.map(
+                lambda x, y: random_crop_and_flip_swath_centered(
+                    x, y, tf.constant(image_size)
+                )
+            )
+            validation_data = validation_data.map(
+                lambda x, y: random_crop_and_flip_swath_centered(
+                    x, y, tf.constant(image_size)
+                )
+            )
         validation_data = validation_data.cache()
-        print(model.summary())
+        # print(model.summary())
         history = model.fit(
             training_data,
             epochs=n_epochs,
