@@ -26,10 +26,13 @@ def train(
         test_fraction,
         settings.BATCH_SIZE,
         settings.INPUT_PARAMS,
+        settings.TRAINING_LABEL_NAME,
+        settings.TRAINING_LABEL_MAX,
+        settings.TRAINING_LABEL_MIN,
         settings.FILL_VALUE_IMAGES,
         settings.FILL_VALUE_LABELS,
+        settings.UPDATE_STD_MEAN,
     )
-    print("read training data")
     print(settings.INPUT_PARAMS)
     if not only_evaluate:
         UnetTrainer.train(
