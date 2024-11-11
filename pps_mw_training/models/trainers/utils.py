@@ -2,6 +2,7 @@ import gc
 import os
 import psutil
 
+from keras.backend import clear_session  # type: ignore
 from keras.callbacks import Callback  # type: ignore
 
 
@@ -26,4 +27,4 @@ class MemoryUsageCallback(Callback):
     def on_epoch_end(self, epoch, logs=None):
         print(f"On epoch {epoch + 1} end: {self.info()}")
         gc.collect()
-        k.clear_session()
+        clear_session()

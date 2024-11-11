@@ -205,7 +205,7 @@ def get_training_dataset(
             batch_size,
             qi_min,
             distance_max,
-            params=json.dumps(input_params),
+            input_params=json.dumps(input_params),
             fill_value_mw=fill_value_mw,
             fill_value_radar=fill_value_radar,
         ) for f in [
