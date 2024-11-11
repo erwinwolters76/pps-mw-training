@@ -100,7 +100,10 @@ def add_parser(
         "--neurons",
         dest="n_neurons_per_hidden_layer",
         type=int,
-        help=("Number of hidden layers, " f"default is {n_neurons_per_hidden_layer}"),
+        help=(
+            "Number of hidden layers, "
+            f"default is {n_neurons_per_hidden_layer}"
+        ),
         default=n_neurons_per_hidden_layer,
     )
     parser.add_argument(
@@ -117,7 +120,8 @@ def add_parser(
             dest="training_data_path",
             type=str,
             help=(
-                "Path to training data, " f"default is {training_data_path.as_posix()}"
+                "Path to training data, "
+                f"default is {training_data_path.as_posix()}"
             ),
             default=training_data_path.as_posix(),
         )
@@ -169,7 +173,9 @@ def add_parser(
 
 
 def cli(args_list: list[str] = argv[1:]) -> None:
-    parser = argparse.ArgumentParser(description="""Run the pps-mw-training app.""")
+    parser = argparse.ArgumentParser(
+        description="""Run the pps-mw-training app."""
+    )
     subparsers = parser.add_subparsers(dest="pipeline_type")
     add_parser(
         subparsers,
