@@ -15,14 +15,7 @@ class ConvolutionBlock(layers.Layer):
         super().__init__()
         self.block = keras.Sequential()
         self.block.add(SymmetricPadding(1))
-        self.block.add(
-            layers.Conv2D(
-                channels_out,
-                3,
-                padding="valid",
-                input_shape=(None, None, channels_in),
-            )
-        )
+        self.block.add(layers.Conv2D(channels_out, 3, padding="valid"))
         self.block.add(layers.BatchNormalization())
         self.block.add(layers.ReLU())
         self.block.add(SymmetricPadding(1))
@@ -60,7 +53,6 @@ class UpsamplingBlock(layers.Layer):
         self.reduce_channels = layers.Conv2D(
             channels_in // 2, 1,
             padding="same",
-            input_shape=(None, None, channels_in),
         )
         self.concat = layers.Concatenate()
         self.conv_block = ConvolutionBlock(channels_in, channels_out)

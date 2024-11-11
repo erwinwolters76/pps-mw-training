@@ -108,6 +108,7 @@ class UnetTrainer(UnetPredictor):
                         "n_unet_blocks": n_unet_blocks,
                         "n_features": n_features,
                         "n_layers": n_layers,
+                        "image_size": image_size,
                         "quantiles": quantiles,
                         "fill_value": fill_value_images,
                         "model_weights": weights_file.as_posix(),

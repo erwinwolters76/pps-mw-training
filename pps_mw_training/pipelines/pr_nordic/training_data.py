@@ -192,8 +192,8 @@ def get_training_dataset(
     """Get training dataset."""
     assert train_fraction + validation_fraction + test_fraction == 1
 
-    sat_files = list((training_data_path / "satellite").glob('*.nc*'))
-    radar_files = list((training_data_path / "radar").glob('*.nc*'))
+    sat_files = list((training_data_path / "satellite").glob("*.nc*"))
+    radar_files = list((training_data_path / "radar").glob("*.nc*"))
     files = match_files(sat_files, radar_files)
 
     train_size = int(len(files) * train_fraction)
