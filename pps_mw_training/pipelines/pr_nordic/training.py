@@ -48,6 +48,7 @@ def train(
             settings.INITIAL_LEARNING_RATE,
             settings.DECAY_STEPS_FACTOR,
             settings.ALPHA,
+            settings.AUGMENTATION_TYPE,
             model_config_path,
         )
     model = UnetTrainer.load(model_config_path / "network_config.json")
