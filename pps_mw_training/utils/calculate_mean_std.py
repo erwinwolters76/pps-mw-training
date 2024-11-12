@@ -1,7 +1,6 @@
 from typing import Any
 from pathlib import Path
 import numpy as np  # type: ignore
-from tqdm import tqdm
 import xarray as xr  # type: ignore
 
 
@@ -15,7 +14,7 @@ def get_std_mean(
         for key in ds.keys():
             all_dict[key] = {"n": 0, "x": 0, "x2": 0, "min": 1e10, "max": 0}
 
-    for file in tqdm(input_files):
+    for file in input_files:
         with xr.open_dataset(file) as ds:
             ds = ds.sel(
                 {
