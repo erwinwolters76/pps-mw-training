@@ -91,5 +91,7 @@ class MlpBlock(keras.Sequential):
             self.add(layers.Activation(keras.activations.relu))
             # self.add(layers.Dropout(0.5)) # added dropout layer here
         self.add(
-            layers.Conv2D(n_outputs, 1, padding="same", kernel_initializer="he_normal")
+            layers.Conv2D(
+                n_outputs, 1, padding="same", kernel_initializer="he_normal"
+            )
         )

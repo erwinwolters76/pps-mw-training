@@ -68,7 +68,7 @@ class Scaler:
             if self.zscore_normalise is not None:
                 if self.mean is None or self.std is None:
                     raise ValueError(
-                        "Mean and std must be provided to run z_score normalisation"
+                        "Mean and std needed to run z_score normalisation"
                     )
                 return (x - self.mean[idx]) / self.std[idx]
 
