@@ -14,7 +14,7 @@ TRAINING_DATA_PATH = Path(
     )
 )
 # model parameters
-INPUT_PARAMS: List[Dict[str, Union[str, float, int]]] = [
+INPUT_PARAMS: List[Dict[str, Union[str, float, int, bool]]] = [
     {
         "name": "M01",
         "scale": "linear",
