@@ -165,3 +165,22 @@ class Scaler:
                 [cls.get_zscore_std_mean(p, "zscore_normalise") for p in params]
             ),
         )
+
+
+@dataclass
+class LabelScaler:
+    """label Scaler class."""
+
+    ymin: np.ndarray
+    ymax: np.ndarray
+
+    def scale(self, y: np.ndarray, fill_value: float) -> np.ndarray:
+        """scale y between min and max"""
+        y[y < self.ymin] = fill_value
+        y[y >= self.ymax] = self.ymax
+        y = (y - self.ymin) / (self.ymax - self.ymin)
+        return y
+
+    def unscale(self, y: np.ndarray) -> np.ndarray:
+        """unscale y between min and max"""
+        return y * (self.ymax - self.ymin) + self.ymin
