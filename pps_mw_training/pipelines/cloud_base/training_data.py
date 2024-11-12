@@ -171,7 +171,7 @@ def get_training_dataset(
 
     if update_std_mean:
         input_params = get_std_mean(
-            input_files[0 : train_size + validation_size], input_params
+            input_files[0: train_size + validation_size], input_params
         )
     params = json.dumps(input_params)
     return [
@@ -187,7 +187,7 @@ def get_training_dataset(
         )
         for f in [
             input_files[0:train_size],
-            input_files[train_size : train_size + validation_size],
-            input_files[train_size + validation_size :],
+            input_files[train_size: train_size + validation_size],
+            input_files[train_size + validation_size:],
         ]
     ]
