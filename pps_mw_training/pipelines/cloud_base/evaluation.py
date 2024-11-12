@@ -55,22 +55,24 @@ def get_stats(
         for i in input_data.numpy():
             images.append(i)
 
-    preds = np.expand_dims(
+    preds_all = np.expand_dims(
         np.array(preds)[:, :, :, len(settings.QUANTILES) // 2], axis=3
     )
-    labels = np.array(labels)
-    images = np.array(images)
+    labels_all = np.array(labels)
+    images_all = np.array(images)
 
     with open("predictions.pickle", "wb") as f:
-        pickle.dump(labels, f)
-        pickle.dump(images, f)
-        pickle.dump(preds, f)
+        pickle.dump(labels_all, f)
+        pickle.dump(images_all, f)
+        pickle.dump(preds_all, f)
 
-    mask = labels > 0
+    mask = labels_all > 0
     return {
-        "rmse": float(np.sqrt(np.nanmean((preds[mask] - labels[mask]) ** 2))),
-        "mae": float(np.mean(np.abs(preds[mask] - labels[mask]))),
-        "corr": float(np.corrcoef(preds[mask], labels[mask])[0, 1]),
+        "rmse": float(
+            np.sqrt(np.nanmean((preds_all[mask] - labels_all[mask]) ** 2))
+        ),
+        "mae": float(np.mean(np.abs(preds_all[mask] - labels_all[mask]))),
+        "corr": float(np.corrcoef(preds_all[mask], labels_all[mask])[0, 1]),
     }
 
 

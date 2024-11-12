@@ -15,7 +15,7 @@ def _load_data(
     input_params: str,
     fill_value_input: float,
     fill_value_label: float,
-    training_label_name: str,
+    training_label_name: bytes,
     training_label_max: float,
     training_label_min: float,
 ) -> list[np.ndarray]:
@@ -25,6 +25,7 @@ def _load_data(
         [f.decode("utf-8") for f in data_files],
         combine="nested",
         concat_dim="nscene",
+        engine="h5netcdf",
     ) as all_data:
         all_data = all_data.sel(
             {
@@ -32,18 +33,16 @@ def _load_data(
                 "nscan": all_data["nscan"].values,
             }
         ).load()
-        input_params = json.loads(input_params)
-        scaler = Scaler.from_dict(input_params)
+        params = json.loads(input_params)
+        scaler = Scaler.from_dict(params)
         input_data = np.stack(
             [
                 scaler.apply(all_data[p["name"]][:, :, :].values, idx)
-                for idx, p in enumerate(input_params)
+                for idx, p in enumerate(params)
             ],
             axis=3,
         )
-        label_data = all_data[training_label_name.decode("utf-8")][
-            :, :, :
-        ].values
+        label_data = all_data[training_label_name.decode("utf-8")].values
         input_data[~np.isfinite(input_data)] = fill_value_input
         label_data[~np.isfinite(label_data)] = fill_value_label
         label_data[label_data < training_label_min] = fill_value_label
@@ -52,7 +51,7 @@ def _load_data(
             training_label_max - training_label_min
         )
         # extra augmentation as rotate
-        input_data, label_data = rotate_data(input_data, label_data)
+        # input_data, label_data = rotate_data(input_data, label_data)
         return [
             np.float32(input_data),
             np.float32(np.expand_dims(label_data, axis=3)),
@@ -130,7 +129,7 @@ def _get_training_dataset(
     ds = tf.data.Dataset.from_tensor_slices(
         [f.as_posix() for f in matched_files]
     )
-    matched_files = [f.as_posix() for f in matched_files]
+    # matched_files = [f.as_posix() for f in matched_files]
     ds = ds.batch(batch_size)
     ds = ds.map(
         lambda x: load_data(
@@ -142,6 +141,7 @@ def _get_training_dataset(
             tf.constant(training_label_max),
             tf.constant(training_label_min),
         ),
+        num_parallel_calls=1,
     )
     return ds
 
@@ -163,7 +163,7 @@ def get_training_dataset(
     """Get training dataset."""
 
     assert train_fraction + validation_fraction + test_fraction == 1
-    input_files = list((training_data_path).glob("cnn_data*.nc*"))
+    input_files = list((training_data_path).glob("cnn_data*.nc*"))[:1000]
 
     s = len(input_files)
     train_size = int(s * train_fraction)
