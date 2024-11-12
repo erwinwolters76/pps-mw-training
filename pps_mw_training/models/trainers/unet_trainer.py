@@ -101,21 +101,21 @@ class UnetTrainer(UnetPredictor):
                 lambda x, y: random_flip(x, y)
             )
 
-        if augmentation_type.value == "crop":
+        if augmentation_type is AugmentationType.CROP:
             training_data = training_data.map(
                 lambda x, y: random_crop(x, y, tf.constant(image_size))
             )
             validation_data = validation_data.map(
                 lambda x, y: random_crop(x, y, tf.constant(image_size))
             )
-        if augmentation_type.value == "crop_and_flip":
+        if augmentation_type is AugmentationType.CROP_AND_FLIP:
             training_data = training_data.map(
                 lambda x, y: random_crop_and_flip(x, y, tf.constant(image_size))
             )
             validation_data = validation_data.map(
                 lambda x, y: random_crop_and_flip(x, y, tf.constant(image_size))
             )
-        if augmentation_type.value == "crop_and_flip_swath_centered":
+        if augmentation_type is AugmentationType.CROP_AND_FLIP_CENTERED:
             training_data = training_data.map(
                 lambda x, y: random_crop_and_flip_swath_centered(
                     x, y, tf.constant(image_size)
