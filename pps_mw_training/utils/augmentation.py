@@ -100,10 +100,10 @@ def random_crop(
         dtype=tf.dtypes.int32,
     )
     return (
-        x[s1 : s1 + image_size, s2 : s2 + image_size, :],
+        x[s1: s1 + image_size, s2: s2 + image_size, :],
         y[
-            s1 * n1 : (s1 + image_size) * n1,
-            s2 * n2 : (s2 + image_size) * n2,
+            s1 * n1: (s1 + image_size) * n1,
+            s2 * n2: (s2 + image_size) * n2,
             :,
         ],
     )
@@ -135,10 +135,10 @@ def random_crop_swath_centered(x, y, image_size):
     s2 = center_x - image_size // 2
     s2 = tf.maximum(tf.minimum(s2, x_shape[1] - image_size), 0)
     return (
-        x[s1 : s1 + image_size, s2 : s2 + image_size, :],
+        x[s1: s1 + image_size, s2: s2 + image_size, :],
         y[
-            s1 * n1 : (s1 + image_size) * n1,
-            s2 * n2 : (s2 + image_size) * n2,
+            s1 * n1: (s1 + image_size) * n1,
+            s2 * n2: (s2 + image_size) * n2,
             :,
         ],
     )
