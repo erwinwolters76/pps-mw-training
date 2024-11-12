@@ -31,9 +31,7 @@ def train(
         settings.TRAINING_LABEL_MIN,
         settings.FILL_VALUE_IMAGES,
         settings.FILL_VALUE_LABELS,
-        settings.UPDATE_STD_MEAN,
     )
-    print(settings.INPUT_PARAMS)
     if not only_evaluate:
         UnetTrainer.train(
             settings.INPUT_PARAMS,
