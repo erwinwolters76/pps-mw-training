@@ -68,9 +68,9 @@ def get_stats(
 
     mask = labels > 0
     return {
-        "rmse": np.sqrt(np.nanmean((preds[mask] - labels[mask]) ** 2)),
-        "mae": np.mean(np.abs(preds[mask] - labels[mask])),
-        "corr": np.corrcoef(preds[mask], labels[mask])[0, 1],
+        "rmse": float(np.sqrt(np.nanmean((preds[mask] - labels[mask]) ** 2))),
+        "mae": float(np.mean(np.abs(preds[mask] - labels[mask]))),
+        "corr": float(np.corrcoef(preds[mask], labels[mask])[0, 1]),
     }
 
 
@@ -83,9 +83,10 @@ def plot_preds(
         pred = predictor.model(input_data).numpy()
         fig, ax = plt.subplots(1, 2)
         ax = ax.ravel()
+        label_data = label_data.numpy().squeeze()
         label_mask = label_data > 0
         iq = len(settings.QUANTILES) // 2
-        ax[0].scatter(label_data[label_mask], pred[:, iq][label_mask])
+        ax[0].scatter(label_data[label_mask], pred[:, :, :, iq][label_mask])
         ax[1].hist(
             label_data[label_mask],
             bins=100,
@@ -94,7 +95,7 @@ def plot_preds(
             label="labels",
         )
         ax[1].hist(
-            pred[:, 5][label_mask],
+            pred[:, :, :, iq][label_mask],
             bins=100,
             histtype="step",
             density=True,
@@ -102,3 +103,4 @@ def plot_preds(
         )
         ax[1].legend()
         plt.show()
+        fig.savefig("test.png")

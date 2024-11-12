@@ -40,7 +40,7 @@ class UnetPredictor:
             config["n_unet_blocks"],
             config["n_features"],
             config["n_layers"],
-            # config["super_resolution"]
+            config["super_resolution"],
         )
         model.build_graph(config["image_size"], n_inputs)
         model.load_weights(config["model_weights"])
@@ -61,15 +61,14 @@ class UnetPredictor:
         """Prescale data."""
         data = np.stack(
             [
-                pre_scaler.apply(
-                    data[p["name"]][:, :, :].values, idx)
+                pre_scaler.apply(data[p["name"]][:, :, :].values, idx)
                 for idx, p in enumerate(input_params)
             ],
             axis=3,
         )
         data[~np.isfinite(data)] = fill_value
         return data
-    
+
     def predict(
         self,
         input_data: Dataset,

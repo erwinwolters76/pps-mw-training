@@ -216,24 +216,6 @@ def cli(args_list: list[str] = argv[1:]) -> None:
     )
     add_parser(
         subparsers,
-        PipelineType.CLOUD_BASE,
-        (
-            "Run the cloud_base training pipeline for the training "
-            "of a U-Net convolutional and quantile regression neural "
-            "network, for the retrieval of cloud base heights from VGAC data"
-        ),
-        cb_settings.N_LAYERS,
-        cb_settings.N_FEATURES,
-        cb_settings.BATCH_SIZE,
-        cb_settings.N_EPOCHS,
-        cb_settings.TRAIN_FRACTION,
-        cb_settings.VALIDATION_FRACTION,
-        cb_settings.TEST_FRACTION,
-        cb_settings.MODEL_CONFIG_PATH,
-        training_data_path=cb_settings.TRAINING_DATA_PATH,
-    )
-    add_parser(
-        subparsers,
         PipelineType.IWP_ICI,
         (
             "Run the pps-mw training app for the training of a single "

@@ -21,9 +21,10 @@ class UnetModel(keras.Model):
         n_blocks: int,
         n_features: int,
         n_layers: int,
-        # super_resolution: bool,
+        super_resolution: bool,
     ):
         super().__init__()
+        self.super_resolution = super_resolution
         self.input_block = ConvolutionBlock(n_inputs, n_unet_base)
         self.down_sampling_blocks = [
             DownsamplingBlock(
@@ -39,7 +40,8 @@ class UnetModel(keras.Model):
             )
             for i in range(n_blocks - 1, -1, -1)
         ]
-        self.up_sampling_layer = UpSampling2D()
+        if self.super_resolution:
+            self.up_sampling_layer = UpSampling2D()
         self.output_block = MlpBlock(n_outputs, n_features, n_layers)
 
     def call(self, inputs: tf.Tensor) -> tf.Tensor:
@@ -51,10 +53,9 @@ class UnetModel(keras.Model):
             xs.append(x)
         for idx, up_block in enumerate(self.up_sampling_blocks):
             x = up_block([x, xs[-2 - idx]])
-        # if self.super_resolution:
-        #     x = self.up_sampling_layer(x)
+        if self.super_resolution:
+            x = self.up_sampling_layer(x)
         return self.output_block(x)
-        return self.output_block(inputs)
 
     def build_graph(self, image_size: int, n_inputs: int):
         x = keras.Input(shape=(image_size, image_size, n_inputs))

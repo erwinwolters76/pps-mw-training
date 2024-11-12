@@ -54,7 +54,7 @@ class UnetTrainer(UnetPredictor):
         decay_steps_factor: float,
         alpha: float,
         augmentation_type: AugmentationType,
-        # super_resolution: bool,
+        super_resolution: bool,
         output_path: Path,
     ) -> None:
         """Train the model."""
@@ -73,7 +73,7 @@ class UnetTrainer(UnetPredictor):
                 n_unet_blocks,
                 n_features,
                 n_layers,
-                # super_resolution,
+                super_resolution,
             )
             model.build_graph(image_size, n_inputs)
         learning_rate = tf.keras.optimizers.schedules.CosineDecay(
@@ -94,7 +94,7 @@ class UnetTrainer(UnetPredictor):
             ),
         )
         output_path.mkdir(parents=True, exist_ok=True)
-        weights_file = output_path / "weights.h5"
+        weights_file = output_path / "pr_nordic.weights.h5"
 
         if augmentation_type.value == "flip":
             training_data = training_data.map(lambda x, y: random_flip(x, y))
@@ -128,7 +128,6 @@ class UnetTrainer(UnetPredictor):
                 )
             )
         validation_data = validation_data.cache()
-        # print(model.summary())
         history = model.fit(
             training_data,
             epochs=n_epochs,
@@ -156,7 +155,7 @@ class UnetTrainer(UnetPredictor):
                         "image_size": image_size,
                         "quantiles": quantiles,
                         "fill_value": fill_value_images,
-                        # "super_resolution": super_resolution,
+                        "super_resolution": super_resolution,
                         "model_weights": weights_file.as_posix(),
                     },
                     indent=4,

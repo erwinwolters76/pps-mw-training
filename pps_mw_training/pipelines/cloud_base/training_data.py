@@ -163,7 +163,7 @@ def get_training_dataset(
     """Get training dataset."""
 
     assert train_fraction + validation_fraction + test_fraction == 1
-    input_files = list((training_data_path).glob("cnn_data*.nc*"))[:100]
+    input_files = list((training_data_path).glob("cnn_data*.nc*"))
 
     s = len(input_files)
     train_size = int(s * train_fraction)
