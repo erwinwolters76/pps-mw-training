@@ -129,7 +129,6 @@ def _get_training_dataset(
     ds = tf.data.Dataset.from_tensor_slices(
         [f.as_posix() for f in matched_files]
     )
-    # matched_files = [f.as_posix() for f in matched_files]
     ds = ds.batch(batch_size)
     ds = ds.map(
         lambda x: load_data(

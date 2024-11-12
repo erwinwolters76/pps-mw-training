@@ -64,7 +64,6 @@ class UnetTrainer(UnetPredictor):
             model = cls.load(model_config_file).model
         else:
             n_inputs = len(input_parameters)
-            print(f"n_inputs is {n_inputs}")
             n_outputs = len(quantiles)
             model = UnetModel(
                 n_inputs,
@@ -96,7 +95,7 @@ class UnetTrainer(UnetPredictor):
         output_path.mkdir(parents=True, exist_ok=True)
         weights_file = output_path / "pr_nordic.weights.h5"
 
-        if augmentation_type.value == "flip":
+        if augmentation_type is AugmentationType.FLIP:
             training_data = training_data.map(lambda x, y: random_flip(x, y))
             validation_data = validation_data.map(
                 lambda x, y: random_flip(x, y)

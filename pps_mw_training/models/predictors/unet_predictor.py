@@ -74,7 +74,6 @@ class UnetPredictor:
         input_data: Dataset,
     ) -> np.ndarray:
         """Apply the trained neural network for a retrieval purpose."""
-        print("applying scaling")
         prescaled = self.prescale(
             input_data, self.pre_scaler, self.input_params, self.fill_value
         )

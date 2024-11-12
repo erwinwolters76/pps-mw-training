@@ -18,12 +18,10 @@ class ConvolutionBlock(layers.Layer):
         self.block.add(layers.Conv2D(channels_out, 3, padding="valid"))
         self.block.add(layers.BatchNormalization())
         self.block.add(layers.ReLU())
-        # self.block.add(layers.Dropout(0.3))  # Added dropout here
         self.block.add(SymmetricPadding(1))
         self.block.add(layers.Conv2D(channels_out, 3, padding="valid"))
         self.block.add(layers.BatchNormalization())
         self.block.add(layers.ReLU())
-        # self.block.add(layers.Dropout(0.3))  # Added second dropout
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
         return self.block(x)
@@ -89,7 +87,6 @@ class MlpBlock(keras.Sequential):
                 )
             )
             self.add(layers.Activation(keras.activations.relu))
-            # self.add(layers.Dropout(0.5)) # added dropout layer here
         self.add(
             layers.Conv2D(
                 n_outputs, 1, padding="same", kernel_initializer="he_normal"

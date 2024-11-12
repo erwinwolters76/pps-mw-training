@@ -8,7 +8,7 @@ from keras.callbacks import Callback  # type: ignore
 
 
 class AugmentationType(Enum):
-    "type of augmentation allowed"
+    """Augmentation type."""
     CROP = "crop"
     FLIP = "flip"
     CROP_AND_FLIP = "crop_and_flip"
