@@ -6,8 +6,7 @@ import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 import xarray as xr  # type: ignore
 from scipy.ndimage import rotate  # type: ignore
-from pps_mw_training.utils.scaler import Scaler
-from pps_mw_training.utils.calculate_mean_std import get_std_mean
+from pps_mw_training.utils.scaler import Scaler, LabelScaler
 
 
 def _load_data(
@@ -45,11 +44,10 @@ def _load_data(
         label_data = all_data[training_label_name.decode("utf-8")].values
         input_data[~np.isfinite(input_data)] = fill_value_input
         label_data[~np.isfinite(label_data)] = fill_value_label
-        label_data[label_data < training_label_min] = fill_value_label
-        label_data[label_data >= training_label_max] = training_label_max
-        label_data = (label_data - training_label_min) / (
-            training_label_max - training_label_min
-        )
+
+        label_scaler = LabelScaler(training_label_min, training_label_max)
+        label_data = label_scaler.scale(label_data, fill_value_label)
+
         # extra augmentation as rotate
         # input_data, label_data = rotate_data(input_data, label_data)
         return [
@@ -61,7 +59,8 @@ def _load_data(
 def rotate_data(
     xtrain: np.ndarray, ytrain: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """rotate training data and label data
+    """
+    rotate training data and label data
     should be in augmentation
     """
     xrotated = np.empty(xtrain.shape)
@@ -157,7 +156,6 @@ def get_training_dataset(
     training_label_min: float,
     fill_value_input: float,
     fill_value_label: float,
-    update_std_mean: bool,
 ) -> list[tf.data.Dataset]:
     """Get training dataset."""
 
@@ -168,10 +166,6 @@ def get_training_dataset(
     train_size = int(s * train_fraction)
     validation_size = int(s * validation_fraction)
 
-    if update_std_mean:
-        input_params = get_std_mean(
-            input_files[0: train_size + validation_size], input_params
-        )
     params = json.dumps(input_params)
     return [
         _get_training_dataset(
@@ -186,7 +180,7 @@ def get_training_dataset(
         )
         for f in [
             input_files[0:train_size],
-            input_files[train_size: train_size + validation_size],
-            input_files[train_size + validation_size:],
+            input_files[train_size : train_size + validation_size],
+            input_files[train_size + validation_size :],
         ]
     ]
