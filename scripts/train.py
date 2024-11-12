@@ -4,10 +4,10 @@ from pathlib import Path
 from sys import argv
 from typing import Optional
 
-from pps_mw_training.pipelines.iwp_ici import training as iit
-from pps_mw_training.pipelines.pr_nordic import training as pnt
-from pps_mw_training.pipelines.cloud_base import training as clb
 from pps_mw_training.pipelines.pipeline_type import PipelineType
+from pps_mw_training.pipelines.pr_nordic import settings as pn_settings
+from pps_mw_training.pipelines.iwp_ici import settings as ii_settings
+from pps_mw_training.pipelines.cloud_base import settings as cb_settings
 
 
 def add_parser(
@@ -186,15 +186,15 @@ def cli(args_list: list[str] = argv[1:]) -> None:
             "network, for the retrieval of ground based radar "
             "reflectivity data from microwave sounding data."
         ),
-        pnt.settings.N_LAYERS,
-        pnt.settings.N_FEATURES,
-        pnt.settings.BATCH_SIZE,
-        pnt.settings.N_EPOCHS,
-        pnt.settings.TRAIN_FRACTION,
-        pnt.settings.VALIDATION_FRACTION,
-        pnt.settings.TEST_FRACTION,
-        pnt.settings.MODEL_CONFIG_PATH,
-        training_data_path=pnt.settings.TRAINING_DATA_PATH,
+        pn_settings.N_LAYERS,
+        pn_settings.N_FEATURES,
+        pn_settings.BATCH_SIZE,
+        pn_settings.N_EPOCHS,
+        pn_settings.TRAIN_FRACTION,
+        pn_settings.VALIDATION_FRACTION,
+        pn_settings.TEST_FRACTION,
+        pn_settings.MODEL_CONFIG_PATH,
+        training_data_path=pn_settings.TRAINING_DATA_PATH,
     )
     add_parser(
         subparsers,
@@ -204,15 +204,33 @@ def cli(args_list: list[str] = argv[1:]) -> None:
             "of a U-Net convolutional and quantile regression neural "
             "network, for the retrieval of cloud base heights from VGAC data"
         ),
-        clb.settings.N_LAYERS,
-        clb.settings.N_FEATURES,
-        clb.settings.BATCH_SIZE,
-        clb.settings.N_EPOCHS,
-        clb.settings.TRAIN_FRACTION,
-        clb.settings.VALIDATION_FRACTION,
-        clb.settings.TEST_FRACTION,
-        clb.settings.MODEL_CONFIG_PATH,
-        training_data_path=clb.settings.TRAINING_DATA_PATH,
+        cb_settings.N_LAYERS,
+        cb_settings.N_FEATURES,
+        cb_settings.BATCH_SIZE,
+        cb_settings.N_EPOCHS,
+        cb_settings.TRAIN_FRACTION,
+        cb_settings.VALIDATION_FRACTION,
+        cb_settings.TEST_FRACTION,
+        cb_settings.MODEL_CONFIG_PATH,
+        training_data_path=cb_settings.TRAINING_DATA_PATH,
+    )
+    add_parser(
+        subparsers,
+        PipelineType.CLOUD_BASE,
+        (
+            "Run the cloud_base training pipeline for the training "
+            "of a U-Net convolutional and quantile regression neural "
+            "network, for the retrieval of cloud base heights from VGAC data"
+        ),
+        cb_settings.N_LAYERS,
+        cb_settings.N_FEATURES,
+        cb_settings.BATCH_SIZE,
+        cb_settings.N_EPOCHS,
+        cb_settings.TRAIN_FRACTION,
+        cb_settings.VALIDATION_FRACTION,
+        cb_settings.TEST_FRACTION,
+        cb_settings.MODEL_CONFIG_PATH,
+        training_data_path=cb_settings.TRAINING_DATA_PATH,
     )
     add_parser(
         subparsers,
@@ -224,21 +242,23 @@ def cli(args_list: list[str] = argv[1:]) -> None:
             "to retrieve ice water path and other associated parameters "
             "from ICI data."
         ),
-        iit.settings.N_HIDDEN_LAYERS,
-        iit.settings.N_NEURONS_PER_HIDDEN_LAYER,
-        iit.settings.BATCH_SIZE,
-        iit.settings.N_EPOCHS,
-        iit.settings.TRAIN_FRACTION,
-        iit.settings.VALIDATION_FRACTION,
-        iit.settings.TEST_FRACTION,
-        iit.settings.MODEL_CONFIG_PATH,
-        activation=iit.settings.ACTIVATION,
-        missing_fraction=iit.settings.MISSING_FRACTION,
-        db_file=iit.settings.ICI_RETRIEVAL_DB_FILE,
+        ii_settings.N_HIDDEN_LAYERS,
+        ii_settings.N_NEURONS_PER_HIDDEN_LAYER,
+        ii_settings.BATCH_SIZE,
+        ii_settings.N_EPOCHS,
+        ii_settings.TRAIN_FRACTION,
+        ii_settings.VALIDATION_FRACTION,
+        ii_settings.TEST_FRACTION,
+        ii_settings.MODEL_CONFIG_PATH,
+        activation=ii_settings.ACTIVATION,
+        missing_fraction=ii_settings.MISSING_FRACTION,
+        db_file=ii_settings.ICI_RETRIEVAL_DB_FILE,
     )
     args = parser.parse_args(args_list)
     pipeline_type = PipelineType(args.pipeline_type)
     if pipeline_type is PipelineType.PR_NORDIC:
+        from pps_mw_training.pipelines.pr_nordic import training as pnt
+
         pnt.train(
             args.n_hidden_layers,
             args.n_neurons_per_hidden_layer,
@@ -252,6 +272,8 @@ def cli(args_list: list[str] = argv[1:]) -> None:
             args.only_evaluate,
         )
     elif pipeline_type is PipelineType.CLOUD_BASE:
+        from pps_mw_training.pipelines.cloud_base import training as clb
+
         clb.train(
             args.n_hidden_layers,
             args.n_neurons_per_hidden_layer,
@@ -265,6 +287,8 @@ def cli(args_list: list[str] = argv[1:]) -> None:
             args.only_evaluate,
         )
     else:
+        from pps_mw_training.pipelines.iwp_ici import training as iit
+
         iit.train(
             args.n_hidden_layers,
             args.n_neurons_per_hidden_layer,

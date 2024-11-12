@@ -75,7 +75,7 @@ class UnetTrainer(UnetPredictor):
                 n_layers,
                 # super_resolution,
             )
-            model.build((None, None, None, n_inputs))
+            model.build_graph(image_size, n_inputs)
         learning_rate = tf.keras.optimizers.schedules.CosineDecay(
             initial_learning_rate=initial_learning_rate,
             decay_steps=int(decay_steps_factor * len(training_data) * n_epochs),
@@ -153,6 +153,7 @@ class UnetTrainer(UnetPredictor):
                         "n_unet_blocks": n_unet_blocks,
                         "n_features": n_features,
                         "n_layers": n_layers,
+                        "image_size": image_size,
                         "quantiles": quantiles,
                         "fill_value": fill_value_images,
                         # "super_resolution": super_resolution,

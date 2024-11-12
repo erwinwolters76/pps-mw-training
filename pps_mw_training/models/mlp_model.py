@@ -1,5 +1,5 @@
-from tensorflow.keras import Input, Sequential  # type: ignore
-from tensorflow.keras.layers import Dense  # type: ignore
+from keras import Input, Sequential  # type: ignore
+from keras.layers import Dense  # type: ignore
 
 
 class MlpModel(Sequential):

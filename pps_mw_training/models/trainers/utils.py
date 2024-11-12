@@ -3,8 +3,8 @@ import os
 from enum import Enum
 import psutil
 
-from tensorflow.keras import backend as k  # type: ignore
-from tensorflow.keras.callbacks import Callback  # type: ignore
+from keras.backend import clear_session  # type: ignore
+from keras.callbacks import Callback  # type: ignore
 
 
 class AugmentationType(Enum):
@@ -22,7 +22,7 @@ class MemoryUsageCallback(Callback):
         return f"{psutil.Process(os.getpid()).memory_info().rss / 1e6} MB"
 
     def learning_rate(self):
-        return float(k.get_value(self.model.optimizer.lr))
+        return float(self.model.optimizer.learning_rate)
 
     def info(self):
         return (
@@ -36,4 +36,4 @@ class MemoryUsageCallback(Callback):
     def on_epoch_end(self, epoch, logs=None):
         print(f"On epoch {epoch + 1} end: {self.info()}")
         gc.collect()
-        k.clear_session()
+        clear_session()

@@ -1,6 +1,6 @@
 import tensorflow as tf  # type: ignore
 from tensorflow import keras
-from tensorflow.keras import layers  # type: ignore
+from keras import layers  # type: ignore
 
 from pps_mw_training.utils.layers import SymmetricPadding, UpSampling2D
 
@@ -15,14 +15,7 @@ class ConvolutionBlock(layers.Layer):
         super().__init__()
         self.block = keras.Sequential()
         self.block.add(SymmetricPadding(1))
-        self.block.add(
-            layers.Conv2D(
-                channels_out,
-                3,
-                padding="valid",
-                input_shape=(None, None, channels_in),
-            )
-        )
+        self.block.add(layers.Conv2D(channels_out, 3, padding="valid"))
         self.block.add(layers.BatchNormalization())
         self.block.add(layers.ReLU())
         # self.block.add(layers.Dropout(0.3))  # Added dropout here
@@ -63,7 +56,6 @@ class UpsamplingBlock(layers.Layer):
             channels_in // 2,
             1,
             padding="same",
-            input_shape=(None, None, channels_in),
         )
         self.concat = layers.Concatenate()
         self.conv_block = ConvolutionBlock(channels_in, channels_out)

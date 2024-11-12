@@ -42,7 +42,7 @@ class UnetPredictor:
             config["n_layers"],
             # config["super_resolution"]
         )
-        model.build((None, None, None, n_inputs))
+        model.build_graph(config["image_size"], n_inputs)
         model.load_weights(config["model_weights"])
         return cls(
             model,

@@ -1,5 +1,5 @@
 import tensorflow as tf  # type: ignore
-from tensorflow.keras import layers  # type: ignore
+from keras import layers  # type: ignore
 
 
 class SymmetricPadding(layers.Layer):

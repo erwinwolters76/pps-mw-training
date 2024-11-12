@@ -6,8 +6,7 @@ import setuptools
 
 here = Path(__file__).parent.absolute()
 required = [
-    r for r in (here / 'requirements.txt').read_text().splitlines()
-    if '=' in r or "git" in r
+    r for r in (here / 'requirements.in').read_text().splitlines()
 ]
 version = re.findall(
     r'__version__ *= *[\'"]([^\'"]+)',

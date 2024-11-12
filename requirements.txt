@@ -4,191 +4,176 @@
 #
 #    pip-compile requirements.in
 #
-absl-py==1.4.0
+absl-py==2.1.0
     # via
+    #   keras
     #   tensorboard
     #   tensorflow
 astunparse==1.6.3
     # via tensorflow
-cachetools==5.3.1
-    # via google-auth
-certifi==2023.5.7
+certifi==2024.8.30
     # via
     #   netcdf4
     #   pyproj
     #   requests
-cftime==1.6.2
+cftime==1.6.4.post1
     # via netcdf4
-charset-normalizer==3.1.0
+charset-normalizer==3.4.0
     # via requests
 click==8.1.7
     # via dask
-cloudpickle==2.2.1
+cloudpickle==3.1.0
     # via dask
-contourpy==1.1.0
+contourpy==1.3.0
     # via matplotlib
-cycler==0.11.0
+cycler==0.12.1
     # via matplotlib
-dask==2023.9.2
+dask==2024.11.0
     # via -r requirements.in
-flatbuffers==23.5.26
+flatbuffers==24.3.25
     # via tensorflow
-fonttools==4.40.0
+fonttools==4.54.1
     # via matplotlib
-fsspec==2023.9.2
+fsspec==2024.10.0
     # via dask
-gast==0.4.0
+gast==0.6.0
     # via tensorflow
-google-auth==2.20.0
-    # via
-    #   google-auth-oauthlib
-    #   tensorboard
-google-auth-oauthlib==1.0.0
-    # via tensorboard
 google-pasta==0.2.0
     # via tensorflow
-grpcio==1.54.2
+grpcio==1.67.1
     # via
     #   tensorboard
     #   tensorflow
-h5py==3.8.0
+h5py==3.12.1
     # via
     #   -r requirements.in
+    #   keras
     #   tensorflow
-idna==3.4
+idna==3.10
     # via requests
-importlib-metadata==6.8.0
+importlib-metadata==8.5.0
     # via dask
-jax==0.4.12
+keras==3.6.0
     # via tensorflow
-keras==2.12.0
-    # via tensorflow
-kiwisolver==1.4.4
+kiwisolver==1.4.7
     # via matplotlib
-libclang==16.0.0
+libclang==18.1.1
     # via tensorflow
 locket==1.0.0
     # via partd
-markdown==3.4.3
+markdown==3.7
     # via tensorboard
-markupsafe==2.1.3
+markdown-it-py==3.0.0
+    # via rich
+markupsafe==3.0.2
     # via werkzeug
-matplotlib==3.7.1
+matplotlib==3.9.2
     # via -r requirements.in
-ml-dtypes==0.2.0
-    # via jax
-netcdf4==1.6.4
+mdurl==0.1.2
+    # via markdown-it-py
+ml-dtypes==0.4.1
+    # via
+    #   keras
+    #   tensorflow
+namex==0.0.8
+    # via keras
+netcdf4==1.7.2
     # via -r requirements.in
-numpy==1.23.5
+numpy==1.26.4
     # via
     #   -r requirements.in
     #   cftime
     #   contourpy
     #   h5py
-    #   jax
+    #   keras
     #   matplotlib
     #   ml-dtypes
     #   netcdf4
-    #   opt-einsum
     #   pandas
-    #   scipy
     #   tensorboard
     #   tensorflow
     #   xarray
-oauthlib==3.2.2
-    # via requests-oauthlib
-opt-einsum==3.3.0
-    # via
-    #   jax
-    #   tensorflow
-packaging==23.1
+opt-einsum==3.4.0
+    # via tensorflow
+optree==0.13.0
+    # via keras
+packaging==24.2
     # via
     #   dask
+    #   keras
     #   matplotlib
+    #   tensorboard
     #   tensorflow
     #   xarray
-pandas==2.0.2
+pandas==2.2.3
     # via xarray
-partd==1.4.0
+partd==1.4.2
     # via dask
-pillow==9.5.0
+pillow==11.0.0
     # via matplotlib
-protobuf==4.23.3
+protobuf==4.25.5
     # via
     #   tensorboard
     #   tensorflow
-psutil==5.9.5
+psutil==6.1.0
     # via -r requirements.in
-pyasn1==0.5.0
-    # via
-    #   pyasn1-modules
-    #   rsa
-pyasn1-modules==0.3.0
-    # via google-auth
-pyparsing==3.0.9
+pygments==2.18.0
+    # via rich
+pyparsing==3.2.0
     # via matplotlib
-pyproj==3.6.0
+pyproj==3.7.0
     # via -r requirements.in
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   matplotlib
     #   pandas
-pytz==2023.3
+pytz==2024.2
     # via pandas
-pyyaml==6.0.1
+pyyaml==6.0.2
     # via dask
-requests==2.31.0
-    # via
-    #   requests-oauthlib
-    #   tensorboard
-requests-oauthlib==1.3.1
-    # via google-auth-oauthlib
-rsa==4.9
-    # via google-auth
-scipy==1.10.1
-    # via jax
+requests==2.32.3
+    # via tensorflow
+rich==13.9.4
+    # via keras
 six==1.16.0
     # via
     #   astunparse
-    #   google-auth
     #   google-pasta
     #   python-dateutil
+    #   tensorboard
     #   tensorflow
-tensorboard==2.12.3
+tensorboard==2.17.1
     # via tensorflow
-tensorboard-data-server==0.7.1
+tensorboard-data-server==0.7.2
     # via tensorboard
-tensorflow==2.12.0
+tensorflow==2.17.0
     # via -r requirements.in
-tensorflow-estimator==2.12.0
+tensorflow-io-gcs-filesystem==0.37.1
     # via tensorflow
-tensorflow-io-gcs-filesystem==0.32.0
+termcolor==2.5.0
     # via tensorflow
-termcolor==2.3.0
-    # via tensorflow
-toolz==0.12.0
+toolz==1.0.0
     # via
     #   dask
     #   partd
-typing-extensions==4.6.3
-    # via tensorflow
-tzdata==2023.3
+typing-extensions==4.12.2
+    # via
+    #   optree
+    #   rich
+    #   tensorflow
+tzdata==2024.2
     # via pandas
-urllib3==1.26.16
-    # via
-    #   google-auth
-    #   requests
-werkzeug==2.3.6
+urllib3==2.2.3
+    # via requests
+werkzeug==3.1.3
     # via tensorboard
-wheel==0.40.0
-    # via
-    #   astunparse
-    #   tensorboard
-wrapt==1.14.1
+wheel==0.45.0
+    # via astunparse
+wrapt==1.16.0
     # via tensorflow
-xarray==2023.5.0
+xarray==2024.10.0
     # via -r requirements.in
-zipp==3.17.0
+zipp==3.21.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
