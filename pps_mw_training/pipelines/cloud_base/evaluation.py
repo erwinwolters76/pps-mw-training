@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt  # type: ignore
 import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 from tensorflow import keras
-import pickle
+import xarray as xr  # type: ignore
 from pps_mw_training.pipelines.cloud_base import settings
 from pps_mw_training.models.predictors.unet_predictor import UnetPredictor
+from pps_mw_training.utils.scaler import LabelScaler
 
 
 def evaluate_model(
@@ -31,15 +32,14 @@ def evaluate_model(
         layer_range=None,
         show_layer_activations=True,
     )
-    stats = get_stats(predictor, test_data)
+    stats = get_stats(predictor, test_data, output_path)
     with open(output_path / "retrieval_stats.json", "w") as outfile:
         outfile.write(json.dumps(stats, indent=4))
     plot_preds(predictor, test_data)
 
 
 def get_stats(
-    predictor: UnetPredictor,
-    test_data: tf.data.Dataset,
+    predictor: UnetPredictor, test_data: tf.data.Dataset, output_path: Path
 ) -> dict[str, float]:
     """Get stats."""
     preds = []
@@ -47,7 +47,6 @@ def get_stats(
     images = []
 
     for input_data, label_data in test_data:
-        print(input_data.numpy().shape)
         for p in predictor.model(input_data).numpy():
             preds.append(p)
         for r in label_data.numpy():
@@ -55,16 +54,18 @@ def get_stats(
         for i in input_data.numpy():
             images.append(i)
 
-    preds_all = np.expand_dims(
-        np.array(preds)[:, :, :, len(settings.QUANTILES) // 2], axis=3
-    )
+    preds_all = np.array(preds)
     labels_all = np.array(labels)
     images_all = np.array(images)
 
-    with open("predictions.pickle", "wb") as f:
-        pickle.dump(labels_all, f)
-        pickle.dump(images_all, f)
-        pickle.dump(preds_all, f)
+    label_scaler = LabelScaler(
+        settings.TRAINING_LABEL_MIN, settings.TRAINING_LABEL_MAX
+    )
+    preds_all = label_scaler.unscale(preds_all)
+    labels_all = label_scaler.unscale(labels_all)
+    write_netcdf(
+        output_path / "predictions.nc", labels_all, images_all, preds_all
+    )
 
     mask = labels_all > 0
     return {
@@ -74,6 +75,35 @@ def get_stats(
         "mae": float(np.mean(np.abs(preds_all[mask] - labels_all[mask]))),
         "corr": float(np.corrcoef(preds_all[mask], labels_all[mask])[0, 1]),
     }
+
+
+def write_netcdf(
+    ncfile: Path, labels: np.ndarray, images: np.ndarray, preds: np.ndarray
+):
+    """write output to netcdf file"""
+
+    nimages = labels.shape[0]
+    x = labels.shape[1]
+    y = labels.shape[2]
+
+    ds = xr.Dataset(
+        {
+            "labels": (["nimages", "x", "y"], labels.squeeze()),
+            "inputs": (["nimages", "x", "y", "ninputs"], images),
+            "preds": (["nimages", "x", "y", "nquantiles"], preds),
+        },
+        coords={
+            "nlabels": np.arange(nimages),
+            "x": np.arange(x),
+            "y": np.arange(y),
+            "ninputs": [item["name"] for item in settings.INPUT_PARAMS],
+            "nquantiles": settings.QUANTILES,
+        },
+    )
+    ds.to_netcdf(
+        ncfile,
+        mode="w",
+    )
 
 
 def plot_preds(
@@ -105,4 +135,3 @@ def plot_preds(
         )
         ax[1].legend()
         plt.show()
-        fig.savefig("test.png")
