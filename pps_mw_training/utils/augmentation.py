@@ -35,8 +35,10 @@ def random_crop_and_flip_swath_centered(
     y,
     image_size,
 ):
-    """Apply random crop and flip.
-    But crop is always centered around data swath"""
+    """
+    Apply random crop and flip.
+    But crop is always centered around data swath
+    """
     x, y = tf.map_fn(
         lambda elems: random_crop_swath_centered(
             elems[0], elems[1], image_size
@@ -131,7 +133,6 @@ def random_crop_swath_centered(x, y, image_size):
         maxval=x_shape[0] - image_size,
         dtype=tf.dtypes.int32,
     )
-    # The x-axis (horizontal) is always centered
     s2 = center_x - image_size // 2
     s2 = tf.maximum(tf.minimum(s2, x_shape[1] - image_size), 0)
     return (
