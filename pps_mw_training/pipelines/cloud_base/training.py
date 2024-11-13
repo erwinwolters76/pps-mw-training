@@ -26,9 +26,7 @@ def train(
         test_fraction,
         settings.BATCH_SIZE,
         settings.INPUT_PARAMS,
-        settings.TRAINING_LABEL_NAME,
-        settings.TRAINING_LABEL_MAX,
-        settings.TRAINING_LABEL_MIN,
+        settings.LABEL_PARAMS,
         settings.FILL_VALUE_IMAGES,
         settings.FILL_VALUE_LABELS,
     )
