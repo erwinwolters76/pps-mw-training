@@ -1,13 +1,17 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 import json
 
 import numpy as np  # type: ignore
 from xarray import Dataset  # type: ignore
 
 from pps_mw_training.models.unet_model import UnetModel
-from pps_mw_training.utils.scaler import Scaler
+from pps_mw_training.utils.scaler import (
+    MinMaxScaler,
+    StandardScaler,
+    get_scaler,
+)
 
 
 @dataclass
@@ -18,7 +22,7 @@ class UnetPredictor:
     """
 
     model: UnetModel
-    pre_scaler: Scaler
+    pre_scaler: Union[MinMaxScaler, StandardScaler]
     input_params: list[dict[str, Any]]
     fill_value: float
 
@@ -46,7 +50,7 @@ class UnetPredictor:
         model.load_weights(config["model_weights"])
         return cls(
             model,
-            Scaler.from_dict(input_parameters),
+            get_scaler(input_parameters),
             input_parameters,
             config["fill_value"],
         )
@@ -54,7 +58,7 @@ class UnetPredictor:
     @staticmethod
     def prescale(
         data: Dataset,
-        pre_scaler: Scaler,
+        pre_scaler: Union[MinMaxScaler, StandardScaler],
         input_params: list[dict[str, Any]],
         fill_value: float,
     ) -> np.ndarray:

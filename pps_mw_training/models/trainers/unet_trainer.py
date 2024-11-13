@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 import json
 
 
@@ -20,7 +20,7 @@ from pps_mw_training.utils.augmentation import (
     random_crop_and_flip_swath_centered,
 )
 from pps_mw_training.utils.loss_function import quantile_loss
-from pps_mw_training.utils.scaler import Scaler
+from pps_mw_training.utils.scaler import MinMaxScaler, StandardScaler
 
 
 @dataclass
@@ -31,7 +31,7 @@ class UnetTrainer(UnetPredictor):
     """
 
     model: UnetModel
-    pre_scaler: Scaler
+    pre_scaler: Union[MinMaxScaler, StandardScaler]
     input_params: list[dict[str, Any]]
     fill_value: float
 

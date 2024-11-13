@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast, Any, List, Dict
+from typing import cast, Any, List, Dict, Union
 import json
 
 import tensorflow as tf  # type: ignore
@@ -12,7 +12,11 @@ from pps_mw_training.models.predictors.mlp_predictor import MlpPredictor
 
 from pps_mw_training.utils.augmentation import set_missing_data
 from pps_mw_training.utils.loss_function import quantile_loss
-from pps_mw_training.utils.scaler import Scaler
+from pps_mw_training.utils.scaler import (
+    get_scaler,
+    MinMaxScaler,
+    StandardScaler,
+)
 
 
 @dataclass
@@ -23,8 +27,8 @@ class MlpTrainer(MlpPredictor):
     """
 
     model: MlpModel
-    pre_scaler: Scaler
-    post_scaler: Scaler
+    pre_scaler: Union[MinMaxScaler, StandardScaler]
+    post_scaler: Union[MinMaxScaler, StandardScaler]
     input_params: List[str]
     output_params: List[str]
     quantiles: List[float]
@@ -131,17 +135,22 @@ class MlpTrainer(MlpPredictor):
         fill_value: float,
     ) -> tf.data.Dataset:
         """Prepare data for training."""
-        input_scaler = Scaler.from_dict(input_parameters)
-        output_scaler = Scaler.from_dict(output_parameters)
+        input_scaler = get_scaler(input_parameters)
+        output_scaler = get_scaler(output_parameters)
         input_params = [cast(str, p["name"]) for p in input_parameters]
         output_params = [cast(str, p["name"]) for p in output_parameters]
-        return tf.data.Dataset.from_tensor_slices(
-            (
-                cls.prescale(training_data, input_scaler, input_params),
-                cls.prescale(training_data, output_scaler, output_params),
+        return (
+            tf.data.Dataset.from_tensor_slices(
+                (
+                    cls.prescale(training_data, input_scaler, input_params),
+                    cls.prescale(training_data, output_scaler, output_params),
+                )
             )
-        ).batch(
-            batch_size=batch_size
-        ).map(
-            lambda x, y: (set_missing_data(x, missing_fraction, fill_value), y)
+            .batch(batch_size=batch_size)
+            .map(
+                lambda x, y: (
+                    set_missing_data(x, missing_fraction, fill_value),
+                    y,
+                )
+            )
         )
