@@ -8,7 +8,7 @@ from tensorflow import keras
 import xarray as xr  # type: ignore
 from pps_mw_training.pipelines.cloud_base import settings
 from pps_mw_training.models.predictors.unet_predictor import UnetPredictor
-from pps_mw_training.utils.scaler import LabelScaler
+from pps_mw_training.utils.scaler import get_scaler
 
 
 def evaluate_model(
@@ -58,11 +58,9 @@ def get_stats(
     labels_all = np.array(labels)
     images_all = np.array(images)
 
-    label_scaler = LabelScaler(
-        settings.TRAINING_LABEL_MIN, settings.TRAINING_LABEL_MAX
-    )
-    preds_all = label_scaler.unscale(preds_all)
-    labels_all = label_scaler.unscale(labels_all)
+    label_scaler = get_scaler(settings.LABEL_PARAMS)
+    preds_all = label_scaler.reverse(preds_all)
+    labels_all = label_scaler.reverse(labels_all)
     write_netcdf(
         output_path / "predictions.nc", labels_all, images_all, preds_all
     )
