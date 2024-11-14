@@ -17,6 +17,7 @@ def train(
     n_epochs: int,
     model_config_path: Path,
     only_evaluate: bool,
+    file_limit: int,
 ):
     "Run the cloud base training pipeline."
     train_ds, val_ds, test_ds = training_data.get_training_dataset(
@@ -29,6 +30,7 @@ def train(
         settings.LABEL_PARAMS,
         settings.FILL_VALUE_IMAGES,
         settings.FILL_VALUE_LABELS,
+        file_limit,
     )
     if not only_evaluate:
         UnetTrainer.train(
