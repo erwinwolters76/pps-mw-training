@@ -19,9 +19,7 @@ def _load_data(
         [f.decode("utf-8") for f in data_files],
         combine="nested",
         concat_dim="nscene",
-        engine="h5netcdf",
     ) as all_data:
-        all_data = all_data.load()
         input_params = json.loads(input_parameters)
         label_params = json.loads(label_parameters)
         input_scaler = get_scaler(input_params)
@@ -138,7 +136,7 @@ def get_training_dataset(
         )
         for f in [
             input_files[0:train_size],
-            input_files[train_size : train_size + validation_size],
-            input_files[train_size + validation_size :],
+            input_files[train_size: train_size + validation_size],
+            input_files[train_size + validation_size:],
         ]
     ]
