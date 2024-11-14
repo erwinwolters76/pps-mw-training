@@ -204,7 +204,7 @@ class StandardScaler:
 def get_scaler(
     params: list[dict[str, str | float]]
 ) -> Union[StandardScaler, MinMaxScaler]:
-    """apropriate scaler class according to input params"""
+    """Get appropriate scaler class according to input parameters."""
     if "min" in list(params)[0] and "max" in list(params)[0]:
         return MinMaxScaler.from_dict(params)
     elif "std" in list(params)[0] and "mean" in list(params)[0]:
