@@ -9,7 +9,7 @@ from keras.callbacks import Callback  # type: ignore
 
 class AugmentationType(Enum):
     """Augmentation type."""
-    CROP = "crop"
+
     FLIP = "flip"
     CROP_AND_FLIP = "crop_and_flip"
     CROP_AND_FLIP_CENTERED = "crop_and_flip_swath_centered"
