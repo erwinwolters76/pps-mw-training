@@ -58,20 +58,35 @@ def get_stats(
     labels_all = np.array(labels)
     images_all = np.array(images)
 
+    model_config_file = output_path / "network_config.json"
+    with open(model_config_file) as config_file:
+        config = json.load(config_file)
+        n_outputs = len(config["quantiles"])
+
     label_scaler = get_scaler(settings.LABEL_PARAMS)
-    preds_all = label_scaler.reverse(preds_all)
-    labels_all = label_scaler.reverse(labels_all)
+    labels_all = label_scaler.reverse(labels_all, 0)
+    preds_all = label_scaler.reverse(preds_all, 0)
     write_netcdf(
         output_path / "predictions.nc", labels_all, images_all, preds_all
     )
-
-    mask = labels_all > 0
+    imedian = n_outputs // 2
+    mask = labels_all.squeeze() > 0
     return {
         "rmse": float(
-            np.sqrt(np.nanmean((preds_all[mask] - labels_all[mask]) ** 2))
+            np.sqrt(
+                np.nanmean(
+                    (preds_all[:, :, :, imedian][mask] - labels_all[mask]) ** 2
+                )
+            )
         ),
-        "mae": float(np.mean(np.abs(preds_all[mask] - labels_all[mask]))),
-        "corr": float(np.corrcoef(preds_all[mask], labels_all[mask])[0, 1]),
+        "mae": float(
+            np.mean(
+                np.abs(preds_all[:, :, :, imedian][mask] - labels_all[mask])
+            )
+        ),
+        "bias": float(
+            np.mean(preds_all[:, :, :, imedian][mask] - labels_all[mask])
+        ),
     }
 
 
@@ -83,7 +98,6 @@ def write_netcdf(
     nimages = labels.shape[0]
     x = labels.shape[1]
     y = labels.shape[2]
-
     ds = xr.Dataset(
         {
             "labels": (["nimages", "x", "y"], labels.squeeze()),
@@ -91,7 +105,7 @@ def write_netcdf(
             "preds": (["nimages", "x", "y", "nquantiles"], preds),
         },
         coords={
-            "nlabels": np.arange(nimages),
+            "nimages": np.arange(nimages),
             "x": np.arange(x),
             "y": np.arange(y),
             "ninputs": [item["name"] for item in settings.INPUT_PARAMS],
