@@ -103,7 +103,7 @@ class MinMaxScaler:
         params: list[dict[str, str | float]],
         feature_range: Tuple[float, float] = (-1.0, 1.0),
     ) -> "MinMaxScaler":
-        """ "Get scaler object from dict."""
+        """Get scaler object from dict."""
         y_min, y_max = feature_range
         try:
             return cls(
