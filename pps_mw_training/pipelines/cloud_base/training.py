@@ -24,7 +24,7 @@ def train(
         train_fraction,
         validation_fraction,
         test_fraction,
-        settings.BATCH_SIZE,
+        batch_size,
         settings.INPUT_PARAMS,
         settings.LABEL_PARAMS,
         settings.FILL_VALUE_IMAGES,
