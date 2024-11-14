@@ -8,13 +8,11 @@ from pps_mw_training.pipelines.cloud_base.input_params import (
     get_selected_params,
 )
 
-MODEL_CONFIG_PATH = Path(
-    os.environ.get("MODEL_CONFIG_CLOUD_BASE", "/home/sm_indka/temp/")
-)
+MODEL_CONFIG_PATH = Path(os.environ.get("MODEL_CONFIG_CLOUD_BASE", "/tmp"))
 TRAINING_DATA_PATH = Path(
     os.environ.get(
         "TRAINING_DATA_PATH_CLOUD_BASE",
-        "/nobackup/smhid20/users/sm_indka/collocated_data/filtered_data/",
+        "/tmp",
     )
 )
 
