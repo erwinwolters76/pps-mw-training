@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import cast, Dict, List, Optional, Tuple, Union
+from typing import cast, Optional, Tuple, Union
 import math
 
 import numpy as np  # type: ignore
@@ -83,7 +83,7 @@ class MinMaxScaler:
         )
 
     @staticmethod
-    def get_min_value(param: Dict[str, Union[str, float]]) -> float:
+    def get_min_value(param: dict[str, str | float]) -> float:
         """Get min value from dict."""
         min_value = cast(float, param["min"])
         return (
@@ -93,14 +93,14 @@ class MinMaxScaler:
         )
 
     @staticmethod
-    def get_max_value(param: Dict[str, Union[str, float]]) -> float:
+    def get_max_value(param: dict[str, str | float]) -> float:
         max_value = cast(float, param["max"])
         return math.log(max_value) if param["scale"] == "log" else max_value
 
     @classmethod
     def from_dict(
         cls,
-        params: List[Dict[str, Union[str, float]]],
+        params: list[dict[str, str | float]],
         feature_range: Tuple[float, float] = (-1.0, 1.0),
     ) -> "MinMaxScaler":
         """ "Get scaler object from dict."""
@@ -186,7 +186,7 @@ class StandardScaler:
     @classmethod
     def from_dict(
         cls,
-        params: List[Dict[str, Union[str, float]]],
+        params: list[dict[str, str | float]],
     ) -> "StandardScaler":
         """ "Get scaler object from dict."""
         try:
