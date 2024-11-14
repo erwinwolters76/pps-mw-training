@@ -61,14 +61,18 @@ def random_flip(
     y,
 ):
     """Random flip of data."""
-    horizontal_flip = tf.random.uniform(()) > 0.5
-    vertical_flip = tf.random.uniform(()) > 0.5
-    if horizontal_flip:
-        x = tf.reverse(x, [2])
-        y = tf.reverse(y, [2])
-    if vertical_flip:
-        x = tf.reverse(x, [1])
-        y = tf.reverse(y, [1])
+
+    def apply_horizontal_flip():
+        return tf.reverse(x, [2]), tf.reverse(y, [2])
+
+    def apply_vertical_flip():
+        return tf.reverse(x, [1]), tf.reverse(y, [1])
+
+    def no_flip():
+        return x, y
+
+    x, y = tf.cond(tf.random.uniform(()) > 0.5, apply_horizontal_flip, no_flip)
+    x, y = tf.cond(tf.random.uniform(()) > 0.5, apply_vertical_flip, no_flip)
     return x, y
 
 
@@ -102,7 +106,7 @@ def random_crop(
         dtype=tf.dtypes.int32,
     )
     return (
-        x[s1: s1 + image_size, s2: s2 + image_size, :],
+        x[s1 : s1 + image_size, s2 : s2 + image_size, :],
         y[
             s1 * n1: (s1 + image_size) * n1,
             s2 * n2: (s2 + image_size) * n2,
@@ -136,7 +140,7 @@ def random_crop_swath_centered(x, y, image_size):
     s2 = center_x - image_size // 2
     s2 = tf.maximum(tf.minimum(s2, x_shape[1] - image_size), 0)
     return (
-        x[s1: s1 + image_size, s2: s2 + image_size, :],
+        x[s1 : s1 + image_size, s2 : s2 + image_size, :],
         y[
             s1 * n1: (s1 + image_size) * n1,
             s2 * n2: (s2 + image_size) * n2,
