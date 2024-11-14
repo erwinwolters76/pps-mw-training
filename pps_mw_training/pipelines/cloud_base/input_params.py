@@ -1,7 +1,7 @@
 from typing import Dict, List, Union
 
 # all available label paramters
-ALL_LABEL_PARAMS: List[Dict[str, Union[str, float, float]]] = [
+ALL_LABEL_PARAMS: List[Dict[str, Union[str, float]]] = [
     {
         "name": "cloud_base",
         "scale": "linear",
@@ -17,7 +17,7 @@ ALL_LABEL_PARAMS: List[Dict[str, Union[str, float, float]]] = [
 ]
 
 # all available input parameters
-ALL_INPUT_PARAMS: List[Dict[str, Union[str, float, float]]] = [
+ALL_INPUT_PARAMS: List[Dict[str, Union[str, float]]] = [
     {
         "name": "M01",
         "scale": "linear",
@@ -304,6 +304,6 @@ ALL_INPUT_PARAMS: List[Dict[str, Union[str, float, float]]] = [
 
 
 def get_selected_params(
-    names: List[str], input_params: List[Dict[str, Union[str, float, float]]]
-) -> List[Dict[str, Union[str, float, float]]]:
+    names: List[str], input_params: List[Dict[str, Union[str, float]]]
+) -> List[Dict[str, Union[str, float]]]:
     return [param for param in input_params if param["name"] in names]
