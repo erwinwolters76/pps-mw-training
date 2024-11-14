@@ -95,3 +95,6 @@ INPUT_PARAMS = get_selected_params(
 LABEL_PARAMS = get_selected_params(
     [SELECTED_TRAINING_LABEL_NAMES], ALL_LABEL_PARAMS
 )
+
+# number of files to process
+FILE_LIMIT = 100
