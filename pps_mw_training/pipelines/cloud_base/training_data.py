@@ -85,7 +85,7 @@ def _get_training_dataset(
     label_params: str,
     fill_value_input: float,
     fill_value_label: float,
-) -> list[tf.data.Dataset]:
+) -> tf.data.Dataset:
     """Get training dataset."""
 
     ds = tf.data.Dataset.from_tensor_slices(
@@ -138,7 +138,7 @@ def get_training_dataset(
         )
         for f in [
             input_files[0:train_size],
-            input_files[train_size: train_size + validation_size],
-            input_files[train_size + validation_size:],
+            input_files[train_size : train_size + validation_size],
+            input_files[train_size + validation_size :],
         ]
     ]
