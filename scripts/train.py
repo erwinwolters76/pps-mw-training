@@ -25,6 +25,7 @@ def add_parser(
     missing_fraction: Optional[float] = None,
     activation: Optional[str] = None,
     db_file: Optional[Path] = None,
+    file_limit: Optional[int] = None,
     training_data_path: Optional[Path] = None,
 ):
     """Add parser and set default values."""
@@ -75,7 +76,7 @@ def add_parser(
         default=n_epochs,
     )
     parser.add_argument(
-        "-l",
+        "-f",
         "--layers",
         dest="n_hidden_layers",
         type=int,
@@ -170,6 +171,19 @@ def add_parser(
         ),
         default=model_config_path.as_posix(),
     )
+    if file_limit is not None:
+        parser.add_argument(
+            "-c",
+            "--file-limit",
+            dest="file_limit",
+            type=int,
+            help=(
+                "Number of files to be processed in, "
+                "the training for cloud base"
+                f"default is {file_limit}"
+            ),
+            default=file_limit,
+        )
 
 
 def cli(args_list: list[str] = argv[1:]) -> None:
@@ -212,6 +226,7 @@ def cli(args_list: list[str] = argv[1:]) -> None:
         cb_settings.VALIDATION_FRACTION,
         cb_settings.TEST_FRACTION,
         cb_settings.MODEL_CONFIG_PATH,
+        file_limit=cb_settings.FILE_LIMIT,
         training_data_path=cb_settings.TRAINING_DATA_PATH,
     )
     add_parser(
@@ -267,6 +282,7 @@ def cli(args_list: list[str] = argv[1:]) -> None:
             args.n_epochs,
             Path(args.model_config_path),
             args.only_evaluate,
+            args.file_limit,
         )
     else:
         from pps_mw_training.pipelines.iwp_ici import training as iit
