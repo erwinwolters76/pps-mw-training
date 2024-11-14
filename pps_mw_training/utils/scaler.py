@@ -15,7 +15,6 @@ class MinMaxScaler:
     xoffset: np.ndarray
     gain: np.ndarray
     ymin: np.ndarray
-    ymax: np.ndarray
     apply_log_scale: Optional[np.ndarray] = None
 
     def get_xoffset(
@@ -38,13 +37,6 @@ class MinMaxScaler:
     ) -> float:
         """Get ymin."""
         return self.ymin if self.ymin.size == 1 else self.ymin[idx]
-
-    def get_ymax(
-        self,
-        idx: int,
-    ) -> float:
-        """Get ymax."""
-        return self.ymax if self.ymax.size == 1 else self.ymax[idx]
 
     def _apply_log_scale(self, idx) -> bool:
         """Check if log scaling should be applied."""
@@ -113,19 +105,23 @@ class MinMaxScaler:
     ) -> "MinMaxScaler":
         """ "Get scaler object from dict."""
         y_min, y_max = feature_range
-        return cls(
-            xoffset=np.array([cls.get_min_value(p) for p in params]),
-            gain=np.array(
-                [
-                    (y_max - y_min)
-                    / (cls.get_max_value(p) - cls.get_min_value(p))
-                    for p in params
-                ]
-            ),
-            ymin=np.full(len(params), y_min),
-            ymax=np.full(len(params), y_max),
-            apply_log_scale=np.array([p["scale"] == "log" for p in params]),
-        )
+        try:
+            return cls(
+                xoffset=np.array([cls.get_min_value(p) for p in params]),
+                gain=np.array(
+                    [
+                        (y_max - y_min)
+                        / (cls.get_max_value(p) - cls.get_min_value(p))
+                        for p in params
+                    ]
+                ),
+                ymin=np.full(len(params), y_min),
+                apply_log_scale=np.array([p["scale"] == "log" for p in params]),
+            )
+        except KeyError:
+            raise ValueError(
+                "Min and max should be set for all parameters in the inputdict"
+            )
 
 
 @dataclass
@@ -187,24 +183,22 @@ class StandardScaler:
         """Get std"""
         return np.float64(np.nanstd(x))
 
-    @staticmethod
-    def get_zscore_std_mean(param: Dict[str, Union[str, float]], key):
-        try:
-            return param[key]
-        except Exception:
-            return None
-
     @classmethod
     def from_dict(
         cls,
         params: List[Dict[str, Union[str, float]]],
     ) -> "StandardScaler":
         """ "Get scaler object from dict."""
-        return cls(
-            mean=np.array([cls.get_zscore_std_mean(p, "mean") for p in params]),
-            std=np.array([cls.get_zscore_std_mean(p, "std") for p in params]),
-            apply_log_scale=np.array([p["scale"] == "log" for p in params]),
-        )
+        try:
+            return cls(
+                mean=np.array([p["mean"] for p in params]),
+                std=np.array([p["std"] for p in params]),
+                apply_log_scale=np.array([p["scale"] == "log" for p in params]),
+            )
+        except KeyError:
+            raise ValueError(
+                "Mean and std should be set for all parameters in the inputdict"
+            )
 
 
 def get_scaler(
