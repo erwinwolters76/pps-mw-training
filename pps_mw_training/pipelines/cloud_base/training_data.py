@@ -111,7 +111,7 @@ def get_training_dataset(
     label_parameters: list[dict[str, str | float]],
     fill_value_input: float,
     fill_value_label: float,
-    file_limit: Optional[int],
+    file_limit: Optional[int] = None,
 ) -> list[tf.data.Dataset]:
     """Get training dataset."""
 
