@@ -42,6 +42,7 @@ class UnetTrainer(UnetPredictor):
         n_unet_blocks: int,
         n_features: int,
         n_layers: int,
+        super_resolution: bool,
         quantiles: list[float],
         training_data: tf.data.Dataset,
         validation_data: tf.data.Dataset,
@@ -49,11 +50,10 @@ class UnetTrainer(UnetPredictor):
         fill_value_images: float,
         fill_value_labels: float,
         image_size: int,
+        augmentation_type: AugmentationType,
         initial_learning_rate: float,
         decay_steps_factor: float,
         alpha: float,
-        augmentation_type: AugmentationType,
-        super_resolution: bool,
         output_path: Path,
     ) -> None:
         """Train the model."""
@@ -92,7 +92,7 @@ class UnetTrainer(UnetPredictor):
             ),
         )
         output_path.mkdir(parents=True, exist_ok=True)
-        weights_file = output_path / "pr_nordic.weights.h5"
+        weights_file = output_path / "unet.weights.h5"
 
         if augmentation_type is AugmentationType.FLIP:
             training_data = training_data.map(lambda x, y: random_flip(x, y))
@@ -142,10 +142,10 @@ class UnetTrainer(UnetPredictor):
                         "n_unet_blocks": n_unet_blocks,
                         "n_features": n_features,
                         "n_layers": n_layers,
+                        "super_resolution": super_resolution,
                         "image_size": image_size,
                         "quantiles": quantiles,
                         "fill_value": fill_value_images,
-                        "super_resolution": super_resolution,
                         "model_weights": weights_file.as_posix(),
                     },
                     indent=4,

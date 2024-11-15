@@ -38,6 +38,7 @@ def train(
             settings.N_UNET_BLOCKS,
             n_features,
             n_layers,
+            settings.SUPER_RESOLUTION,
             settings.QUANTILES,
             train_ds,
             val_ds,
@@ -45,11 +46,10 @@ def train(
             settings.FILL_VALUE_IMAGES,
             settings.FILL_VALUE_LABELS,
             settings.IMAGE_SIZE,
+            settings.AUGMENTATION_TYPE,
             settings.INITIAL_LEARNING_RATE,
             settings.DECAY_STEPS_FACTOR,
             settings.ALPHA,
-            settings.AUGMENTATION_TYPE,
-            settings.SUPER_RESOLUTION,
             model_config_path,
         )
     model = UnetTrainer.load(model_config_path / "network_config.json")
