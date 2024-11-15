@@ -46,7 +46,11 @@ def random_crop_and_flip_swath_centered(
         elems=(x, y),
         fn_output_signature=(tf.float32, tf.float32),
     )
-    x, y = random_flip(x, y)
+    x, y = tf.map_fn(
+        lambda elems: random_rotate_and_flip(elems[0], elems[1]),
+        elems=(x, y),
+        fn_output_signature=(tf.float32, tf.float32),
+    )
     return x, y
 
 
@@ -168,3 +172,35 @@ def set_missing_data(
         x,
         fill_value,
     )
+
+
+@tf.function(
+    input_signature=(
+        tf.TensorSpec(shape=[None, None, None], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32),
+    )
+)
+def random_rotate_and_flip(
+    x,
+    y,
+):
+    """Random rotation and flip of data."""
+
+    def apply_transpose():
+        return tf.transpose(x, perm=[1, 0, 2]), tf.transpose(y, perm=[1, 0, 2])
+
+    def apply_horizontal_flip():
+        return tf.reverse(x, [1]), tf.reverse(y, [1])
+
+    def apply_vertical_flip():
+        return tf.reverse(x, [0]), tf.reverse(y, [0])
+
+    def no_change():
+        return x, y
+
+    x, y = tf.cond(tf.random.uniform(()) > 0.5, apply_transpose, no_change)
+    x, y = tf.cond(
+        tf.random.uniform(()) > 0.5, apply_horizontal_flip, no_change
+    )
+    x, y = tf.cond(tf.random.uniform(()) > 0.5, apply_vertical_flip, no_change)
+    return x, y
