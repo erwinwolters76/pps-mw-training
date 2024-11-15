@@ -6,5 +6,5 @@
 module load Mambaforge/23.3.1-1-hpc1 
 conda activate pps-mw-training
 
-
-python train.py cloud_base  
+pipeline=cloud_base
+python train.py $pipeline
