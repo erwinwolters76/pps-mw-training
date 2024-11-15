@@ -1,7 +1,11 @@
+import argparse
 from typing import Any
 from pathlib import Path
+import json
+
 import numpy as np  # type: ignore
 import xarray as xr  # type: ignore
+from pps_mw_training.pipelines.cloud_base.settings import INPUT_PARAMS
 
 
 def get_std_mean(
@@ -10,20 +14,18 @@ def get_std_mean(
     """calculate std and mean for the input dataset to normalise"""
 
     stats = {}
-    with xr.open_dataset(input_files[0]) as ds:
-        for parameter in ds:
-            data = ds[parameter].values
-            stats[parameter] = {
-                "n": np.sum(np.isfinite(data)),
-                "sum": np.nansum(data),
-                "sum_of_squares": np.nansum(data**2),
-            }
-
-    for file in input_files[1:]:
-        with xr.open_dataset(file) as ds:
+    for idx, file in enumerate(input_files):
+        with xr.open_dataset(file.as_posix()) as ds:
             for parameter in ds:
                 data = ds[parameter].values
-                stats[parameter]["n"] += np.sum(np.isfinite(data))
+                if idx == 0:
+                    stats[parameter] = {
+                        "n": np.count_nonzero(np.isfinite(data)),
+                        "sum": np.nansum(data),
+                        "sum_of_squares": np.nansum(data**2),
+                    }
+                    continue
+                stats[parameter]["n"] += np.count_nonzero(np.isfinite(data))
                 stats[parameter]["sum"] += np.nansum(data)
                 stats[parameter]["sum_of_squares"] += np.nansum(data**2)
 
@@ -36,3 +38,24 @@ def get_std_mean(
         )
 
     return input_params
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Calculate std and mean for input datasets."
+    )
+    parser.add_argument(
+        "input_dir",
+        type=str,
+        help="Path to the directory containing input dataset files.",
+    )
+    args = parser.parse_args()
+    input_dir = Path(args.input_dir)
+    input_files = list((input_dir).glob("cnn_data*.nc*"))
+    input_params = get_std_mean(input_files, INPUT_PARAMS)
+    with open("input_params.json", "w") as outfile:
+        outfile.write(json.dumps(input_params, indent=4))
+
+
+if __name__ == "__main__":
+    main()

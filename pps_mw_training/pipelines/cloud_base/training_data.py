@@ -20,12 +20,9 @@ def _load_data(
         combine="nested",
         concat_dim="nscene",
     ) as all_data:
-
-        input_data = scale_data(all_data, input_parameters, fill_value_input)
-        label_data = scale_data(all_data, label_parameters, fill_value_label)
         return [
-            input_data,
-            label_data,
+            scale_data(all_data, input_parameters, fill_value_input),
+            scale_data(all_data, label_parameters, fill_value_label),
         ]
 
 
@@ -114,7 +111,7 @@ def get_training_dataset(
     label_parameters: list[dict[str, str | float]],
     fill_value_input: float,
     fill_value_label: float,
-    file_limit: Optional[int],
+    file_limit: Optional[int] = None,
 ) -> list[tf.data.Dataset]:
     """Get training dataset."""
 
@@ -138,7 +135,7 @@ def get_training_dataset(
         )
         for f in [
             input_files[0:train_size],
-            input_files[train_size: train_size + validation_size],
-            input_files[train_size + validation_size:],
+            input_files[train_size : train_size + validation_size],
+            input_files[train_size + validation_size :],
         ]
     ]
