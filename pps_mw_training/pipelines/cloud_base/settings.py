@@ -85,6 +85,7 @@ INITIAL_LEARNING_RATE = 0.01
 DECAY_STEPS_FACTOR = 0.99
 ALPHA = 0.1
 
+# two parameters below are not intended to be tunable
 AUGMENTATION_TYPE = AugmentationType.CROP_AND_FLIP_CENTERED
 SUPER_RESOLUTION = False
 
@@ -95,6 +96,3 @@ INPUT_PARAMS = get_selected_params(
 LABEL_PARAMS = get_selected_params(
     [SELECTED_TRAINING_LABEL_NAMES], ALL_LABEL_PARAMS
 )
-
-# number of files to process
-FILE_LIMIT = 100
