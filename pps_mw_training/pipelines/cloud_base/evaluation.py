@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 
 import numpy as np  # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
 import tensorflow as tf  # type: ignore
 from tensorflow import keras
 import xarray as xr  # type: ignore
@@ -46,7 +47,6 @@ def get_stats(
 
     for input_data, label_data in test_data:
         for p in predictor.model(input_data).numpy():
-
             preds.append(p)
         for r in label_data.numpy():
             labels.append(r)
@@ -54,7 +54,7 @@ def get_stats(
             inputs.append(i)
 
     preds_all = np.array(preds)
-    labels_all = np.array(labels)
+    labels_all = np.array(labels).squeeze()
     inputs_all = np.array(inputs)
 
     model_config_file = output_path / "network_config.json"
@@ -63,6 +63,7 @@ def get_stats(
         n_outputs = len(config["quantiles"])
         input_params = config["input_parameters"]
 
+    imedian = n_outputs // 2
     label_scaler = get_scaler(settings.LABEL_PARAMS)
     labels_all = label_scaler.reverse(labels_all, 0)
     preds_all = label_scaler.reverse(preds_all, 0)
@@ -76,12 +77,16 @@ def get_stats(
         axis=3,
     )
     inputs_all[fill_value_mask] = np.nan
+
+    plot_preds(
+        labels_all,
+        preds_all[:, :, :, imedian],
+    )
     write_netcdf(
         output_path / "predictions.nc", labels_all, inputs_all, preds_all
     )
 
-    imedian = n_outputs // 2
-    mask = labels_all.squeeze() > 0
+    mask = labels_all > 0
     return {
         "rmse": float(
             np.sqrt(
@@ -111,7 +116,7 @@ def write_netcdf(
     y = labels.shape[2]
     ds = xr.Dataset(
         {
-            "labels": (["nimages", "x", "y"], labels.squeeze()),
+            "labels": (["nimages", "x", "y"], labels),
             "inputs": (["nimages", "x", "y", "ninputs"], inputs),
             "preds": (["nimages", "x", "y", "nquantiles"], preds),
         },
@@ -127,3 +132,31 @@ def write_netcdf(
         ncfile,
         mode="w",
     )
+
+
+def plot_preds(labels: np.ndarray, preds: np.ndarray):
+    fig, ax = plt.subplots(1, 2, figsize=[8, 4])
+    ax = ax.ravel()
+    valid_labels = labels > 0
+    ax[0].scatter(labels[valid_labels], preds[valid_labels])
+    ax[0].set_xlabel("Labels")
+    ax[1].set_ylabel("Preds")
+    ax[1].hist(
+        labels[valid_labels],
+        bins=100,
+        density=True,
+        histtype="step",
+        label="Labels",
+    )
+    ax[1].hist(
+        preds[valid_labels],
+        bins=100,
+        density=True,
+        histtype="step",
+        label="Preds",
+    )
+    ax[1].legend()
+    ax[1].set_xlabel("labels/preds")
+    ax[1].set_ylabel("Distribution")
+    plt.show()
+    fig.tight_layout()
