@@ -161,7 +161,7 @@ class StandardScaler:
     ) -> np.ndarray:
         """Apply reversed scaling."""
         if idx is not None:
-            data = y * self.std + self.mean
+            data = y * self.std[idx] + self.mean[idx]
             if self._apply_log_scale(idx):
                 return np.exp(data)
             return data
