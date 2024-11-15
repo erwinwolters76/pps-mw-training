@@ -20,12 +20,9 @@ def _load_data(
         combine="nested",
         concat_dim="nscene",
     ) as all_data:
-
-        input_data = scale_data(all_data, input_parameters, fill_value_input)
-        label_data = scale_data(all_data, label_parameters, fill_value_label)
         return [
-            input_data,
-            label_data,
+            scale_data(all_data, input_parameters, fill_value_input),
+            scale_data(all_data, label_parameters, fill_value_label)
         ]
 
 
