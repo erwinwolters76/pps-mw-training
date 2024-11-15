@@ -9,40 +9,30 @@ def get_std_mean(
 ) -> list[dict[str, Any]]:
     """calculate std and mean for the input dataset to normalise"""
 
-    all_dict = {}
+    stats = {}
     with xr.open_dataset(input_files[0]) as ds:
-        for key in ds.keys():
-            all_dict[key] = {"n": 0, "x": 0, "x2": 0, "min": 1e10, "max": 0}
+        for parameter in ds:
+            data = ds[parameter].values
+            stats[parameter] = {
+                "n": np.sum(np.isfinite(data)),
+                "sum": np.nansum(data),
+                "sum_of_squares": np.nansum(data**2),
+            }
 
-    for file in input_files:
+    for file in input_files[1:]:
         with xr.open_dataset(file) as ds:
-            ds = ds.sel(
-                {
-                    "npix": ds["nscan"].values[8:-8],
-                    "nscan": ds["npix"].values[8:-8],
-                }
-            )
-            for key in ds.keys():
-                data = ds[key].values
-                all_dict[key]["n"] += np.sum(np.isfinite(data))
-                all_dict[key]["x"] += np.nansum(data)
-                all_dict[key]["x2"] += np.nansum(data**2)
+            for parameter in ds:
+                data = ds[parameter].values
+                stats[parameter]["n"] += np.sum(np.isfinite(data))
+                stats[parameter]["sum"] += np.nansum(data)
+                stats[parameter]["sum_of_squares"] += np.nansum(data**2)
 
-                if data.size > 0:
-                    all_dict[key]["min"] = min(
-                        all_dict[key]["min"], np.nanmin(data)
-                    )
-                    all_dict[key]["max"] = max(
-                        all_dict[key]["max"], np.nanmax(data)
-                    )
     for p in input_params:
-        key = p["name"]
-        p["mean"] = all_dict[key]["x"] / all_dict[key]["n"]
+        parameter = p["name"]
+        p["mean"] = stats[parameter]["sum"] / stats[parameter]["n"]
         p["std"] = np.sqrt(
-            (all_dict[key]["x2"] / all_dict[key]["n"])
-            - (all_dict[key]["x"] / all_dict[key]["n"]) ** 2
+            (stats[parameter]["sum_of_squares"] / stats[parameter]["n"])
+            - (stats[parameter]["sum"] / stats[parameter]["n"]) ** 2
         )
-        p["min"] = all_dict[key]["min"]
-        p["max"] = all_dict[key]["max"]
 
     return input_params
