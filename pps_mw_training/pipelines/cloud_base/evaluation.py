@@ -57,31 +57,36 @@ def get_stats(
     labels_all = np.array(labels).squeeze()
     inputs_all = np.array(inputs)
 
-    model_config_file = output_path / "network_config.json"
-    with open(model_config_file) as config_file:
-        config = json.load(config_file)
-        n_outputs = len(config["quantiles"])
-        input_params = config["input_parameters"]
-
-    imedian = n_outputs // 2
-    label_scaler = get_scaler(settings.LABEL_PARAMS)
-    labels_all = label_scaler.reverse(labels_all, 0)
-    preds_all = label_scaler.reverse(preds_all, 0)
-    fill_value_mask = inputs_all == config["fill_value"]
-    input_scaler = get_scaler(input_params)
-    inputs_all = np.stack(
-        [
-            input_scaler.reverse(inputs_all[:, :, :, idx], idx)
-            for idx in range(len(input_params))
-        ],
-        axis=3,
+    plt.scatter(
+        labels_all[labels_all > 0], preds_all[:, :, :, 5][labels_all > 0]
     )
-    inputs_all[fill_value_mask] = np.nan
+    plt.show()
+    plt.savefig("test.png")
+    # model_config_file = output_path / "network_config.json"
+    # with open(model_config_file) as config_file:
+    #     config = json.load(config_file)
+    #     n_outputs = len(config["quantiles"])
+    #     input_params = config["input_parameters"]
 
-    plot_preds(
-        labels_all,
-        preds_all[:, :, :, imedian],
-    )
+    # imedian = n_outputs // 2
+    # label_scaler = get_scaler(settings.LABEL_PARAMS)
+    # labels_all = label_scaler.reverse(labels_all, 0)
+    # preds_all = label_scaler.reverse(preds_all, 0)
+    # fill_value_mask = inputs_all == config["fill_value"]
+    # input_scaler = get_scaler(input_params)
+    # inputs_all = np.stack(
+    #     [
+    #         input_scaler.reverse(inputs_all[:, :, :, idx], idx)
+    #         for idx in range(len(input_params))
+    #     ],
+    #     axis=3,
+    # )
+    # inputs_all[fill_value_mask] = np.nan
+
+    # plot_preds(
+    #     labels_all,
+    #     preds_all[:, :, :, imedian],
+    # )
     write_netcdf(
         output_path / "predictions.nc", labels_all, inputs_all, preds_all
     )

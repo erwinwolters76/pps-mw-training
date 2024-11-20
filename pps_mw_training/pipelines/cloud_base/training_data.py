@@ -34,7 +34,14 @@ def scale_data(
     scaler = get_scaler(params)
     data = np.stack(
         [
-            scaler.apply(data[p["name"]].values, idx)
+            np.where(
+                scaler.apply(
+                    data[p["name"]].values == fill_value,
+                    np.nan,
+                    data[p["name"]].values,
+                ),
+                idx,
+            )
             for idx, p in enumerate(params)
         ],
         axis=3,
@@ -116,7 +123,7 @@ def get_training_dataset(
     """Get training dataset."""
 
     assert train_fraction + validation_fraction + test_fraction == 1
-    input_files = list((training_data_path).glob("cnn_data*.nc*"))
+    input_files = list((training_data_path).glob("cnn_data*.nc"))
     if file_limit:
         input_files = input_files[:file_limit]
 
