@@ -128,10 +128,7 @@ def write_netcdf(
             "nquantiles": settings.QUANTILES,
         },
     )
-    ds.to_netcdf(
-        ncfile,
-        mode="w",
-    )
+    ds.to_netcdf(ncfile, mode="w",)
 
 
 def plot_preds(labels: np.ndarray, preds: np.ndarray):
