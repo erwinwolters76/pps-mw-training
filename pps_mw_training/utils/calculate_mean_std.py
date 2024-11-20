@@ -27,7 +27,7 @@ def get_std_mean(
 
 def get_stats(
     input_files: list[Path], input_params: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
+) -> dict[str, Any]:
     """
     Calculate intermediate statistics to calculate mean and std
     """
