@@ -70,7 +70,7 @@ def main():
     )
     args = parser.parse_args()
     input_dir = Path(args.input_dir)
-    input_files = list((input_dir).glob("cnn_data*.nc*"))[:100]
+    input_files = list((input_dir).glob("cnn_data*.nc*"))
     input_params = get_std_mean(input_files, INPUT_PARAMS)
     with open("input_params.json", "w") as outfile:
         outfile.write(json.dumps(input_params, indent=4))
