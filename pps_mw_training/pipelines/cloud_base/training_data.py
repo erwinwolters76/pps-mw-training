@@ -34,8 +34,8 @@ def scale_data(
     scaler = get_scaler(params)
     data = np.stack(
         [
-            np.where(
-                scaler.apply(
+            scaler.apply(
+                np.where(
                     data[p["name"]].values == fill_value,
                     np.nan,
                     data[p["name"]].values,
@@ -142,7 +142,7 @@ def get_training_dataset(
         )
         for f in [
             input_files[0:train_size],
-            input_files[train_size : train_size + validation_size],
-            input_files[train_size + validation_size :],
+            input_files[train_size: train_size + validation_size],
+            input_files[train_size + validation_size:],
         ]
     ]
