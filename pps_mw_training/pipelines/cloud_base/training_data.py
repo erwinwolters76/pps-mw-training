@@ -22,7 +22,7 @@ def _load_data(
     ) as all_data:
         return [
             scale_data(all_data, input_parameters, fill_value_input),
-            scale_data(all_data, label_parameters, fill_value_label),
+            scale_data(all_data, label_parameters, fill_value_label)
         ]
 
 
