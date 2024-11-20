@@ -28,7 +28,7 @@ class UnetModel(keras.Model):
         self.input_block = ConvolutionBlock(n_inputs, n_unet_base)
         self.down_sampling_blocks = [
             DownsamplingBlock(
-                n_unet_base * 2**i,
+                n_unet_base * 2 ** i,
                 n_unet_base * 2 ** (i + 1),
             )
             for i in range(n_blocks)
@@ -36,7 +36,7 @@ class UnetModel(keras.Model):
         self.up_sampling_blocks = [
             UpsamplingBlock(
                 n_unet_base * 2 ** (i + 1),
-                n_unet_base * 2**i,
+                n_unet_base * 2 ** i,
             )
             for i in range(n_blocks - 1, -1, -1)
         ]
