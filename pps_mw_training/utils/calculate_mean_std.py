@@ -5,21 +5,11 @@ import numpy as np  # type: ignore
 import xarray as xr  # type: ignore
 
 
-def get_stats(
-    input_files: list[Path], input_params: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
-    """
-    Calculate standard deviation and mean for the input dataset to normalize.
-    """
-    return get_std_mean(input_files, input_params)
-
-
 def get_std_mean(
     input_files: list[Path], input_params: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
     """
-    Calculate intermediate statistics to calculate mean and std
-    and then update the input_params dict
+    Get standard deviation and mean associated to given parameters of dataset
     """
 
     stats = {
