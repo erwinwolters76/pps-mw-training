@@ -8,14 +8,9 @@ import xarray as xr  # type: ignore
 def get_std_mean(
     input_files: list[Path], params: list[str]
 ) -> dict[str, dict[str, float]]:
-    """
-    Get standard deviation and mean associated to given parameters of dataset.
-    """
+    """Get standard deviation and mean for given parameters of dataset."""
 
-    def _get_std_mean(
-        n: int, sum: float, sum_of_squares: float
-    ) -> dict[str, float]:
-        """Get standard deviation and mean from intermediate stats."""
+    def _get_std_mean(n, sum, sum_of_squares):
         return {
             "mean": sum / n,
             "std": np.sqrt((sum_of_squares / n) - ((sum / n) ** 2)),
@@ -29,10 +24,7 @@ def get_std_mean(
                 stats[p]["sum"] += np.nansum(ds[p].values)
                 stats[p]["sum_of_squares"] += np.nansum(ds[p].values ** 2)
 
-    return {
-        p: _get_std_mean(stat["n"], stat["sum"], stat["sum_of_squares"])
-        for p, stat in stats.items()
-    }
+    return {p: _get_std_mean(**stat) for p, stat in stats.items()}
 
 
 def update_params(
