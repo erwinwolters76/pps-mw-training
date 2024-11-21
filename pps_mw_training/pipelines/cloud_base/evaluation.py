@@ -37,6 +37,30 @@ def evaluate_model(
         outfile.write(json.dumps(stats, indent=4))
 
 
+def unscale_data(
+    data: np.ndarray,
+    parameters: list[dict[str, str | float]],
+    fill_value: float,
+) -> np.ndarray:
+    """Unscale data"""
+    scaler = get_scaler(parameters)
+    data = np.stack(
+        [
+            scaler.reverse(
+                np.where(
+                    data[:, :, :, idx] == fill_value, np.nan, data[:, :, :, idx]
+                ),
+                idx,
+            )
+            for idx in range(len(parameters))
+        ],
+        axis=3,
+        dtype=np.float32,
+    )
+    data[~np.isfinite(data)] = fill_value
+    return data
+
+
 def get_stats(
     predictor: UnetPredictor, test_data: tf.data.Dataset, output_path: Path
 ) -> dict[str, float]:
@@ -54,29 +78,44 @@ def get_stats(
             inputs.append(i)
 
     preds_all = np.array(preds)
-    labels_all = np.array(labels).squeeze()
+    labels_all = np.array(labels)
     inputs_all = np.array(inputs)
-
     model_config_file = output_path / "network_config.json"
     with open(model_config_file) as config_file:
         config = json.load(config_file)
         n_outputs = len(config["quantiles"])
         input_params = config["input_parameters"]
-
     imedian = n_outputs // 2
-    label_scaler = get_scaler(settings.LABEL_PARAMS)
-    labels_all = label_scaler.reverse(labels_all, 0)
-    preds_all = label_scaler.reverse(preds_all, 0)
-    fill_value_mask = inputs_all == config["fill_value"]
-    input_scaler = get_scaler(input_params)
-    inputs_all = np.stack(
+
+    labels_all = unscale_data(
+        labels_all, settings.LABEL_PARAMS, settings.FILL_VALUE_LABELS
+    ).squeeze()
+    inputs_all = unscale_data(inputs_all, input_params, config["fill_value"])
+    preds_all = np.concatenate(
         [
-            input_scaler.reverse(inputs_all[:, :, :, idx], idx)
-            for idx in range(len(input_params))
+            unscale_data(
+                np.expand_dims(preds_all[:, :, :, idx], axis=3),
+                settings.LABEL_PARAMS,
+                settings.FILL_VALUE_LABELS,
+            )
+            for idx in range(n_outputs)
         ],
         axis=3,
+        dtype=np.float32,
     )
-    inputs_all[fill_value_mask] = np.nan
+    # label_scaler = get_scaler(settings.LABEL_PARAMS)
+    # labels_all = label_scaler.reverse(labels_all, 0)
+    # preds_all = label_scaler.reverse(preds_all, 0)
+    # fill_value_mask = inputs_all == config["fill_value"]
+    # input_scaler = get_scaler(input_params)
+    # inputs_all = np.stack(
+    #     [
+    #         input_scaler.reverse(inputs_all[:, :, :, idx], idx)
+    #         for idx in range(len(input_params))
+    #     ],
+    #     axis=3,
+    # )
+    # inputs_all[fill_value_mask] = np.nan
 
     plot_preds(
         labels_all,
@@ -128,7 +167,10 @@ def write_netcdf(
             "nquantiles": settings.QUANTILES,
         },
     )
-    ds.to_netcdf(ncfile, mode="w",)
+    ds.to_netcdf(
+        ncfile,
+        mode="w",
+    )
 
 
 def plot_preds(labels: np.ndarray, preds: np.ndarray):
