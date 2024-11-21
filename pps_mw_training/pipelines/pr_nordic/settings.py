@@ -1,11 +1,10 @@
 from pathlib import Path
 from typing import Dict, List, Union
 import os
+from pps_mw_training.models.trainers.utils import AugmentationType
 
 
-MODEL_CONFIG_PATH = Path(
-    os.environ.get("MODEL_CONFIG_PR_NORDIC", "/tmp")
-)
+MODEL_CONFIG_PATH = Path(os.environ.get("MODEL_CONFIG_PR_NORDIC", "/tmp"))
 TRAINING_DATA_PATH = Path(
     os.environ.get("TRAINING_DATA_PATH_PR_NORDIC", "/tmp")
 )
@@ -15,99 +14,99 @@ INPUT_PARAMS: List[Dict[str, Union[str, float, int]]] = [
         "band": "mw_50",
         "index": 0,
         "scale": "linear",
-        "min": 150.,
-        "max": 300.,
+        "min": 150.0,
+        "max": 300.0,
     },
     {
         "band": "mw_50",
         "index": 2,
         "scale": "linear",
-        "min": 150.,
-        "max": 300.,
+        "min": 150.0,
+        "max": 300.0,
     },
     {
         "band": "mw_50",
         "index": 3,
         "scale": "linear",
-        "min": 150.,
-        "max": 300.,
+        "min": 150.0,
+        "max": 300.0,
     },
     {
         "band": "mw_50",
         "index": 4,
         "scale": "linear",
-        "min": 150.,
-        "max": 300.,
+        "min": 150.0,
+        "max": 300.0,
     },
     {
         "band": "mw_50",
         "index": 5,
         "scale": "linear",
-        "min": 150.,
-        "max": 300.,
+        "min": 150.0,
+        "max": 300.0,
     },
     {
         "band": "mw_50",
         "index": 6,
         "scale": "linear",
-        "min": 150.,
-        "max": 300.,
+        "min": 150.0,
+        "max": 300.0,
     },
     {
         "band": "mw_50",
         "index": 7,
         "scale": "linear",
-        "min": 150.,
-        "max": 300.,
+        "min": 150.0,
+        "max": 300.0,
     },
     {
         "band": "mw_90",
         "index": 0,
         "scale": "linear",
-        "min": 150.,
-        "max": 300.,
+        "min": 150.0,
+        "max": 300.0,
     },
     {
         "band": "mw_160",
         "index": 0,
         "scale": "linear",
-        "min": 150.,
-        "max": 300.,
+        "min": 150.0,
+        "max": 300.0,
     },
     {
         "band": "mw_183",
         "index": 0,
         "scale": "linear",
-        "min": 190.,
-        "max": 290.,
+        "min": 190.0,
+        "max": 290.0,
     },
     {
         "band": "mw_183",
         "index": 1,
         "scale": "linear",
-        "min": 190.,
-        "max": 290.,
+        "min": 190.0,
+        "max": 290.0,
     },
     {
         "band": "mw_183",
         "index": 2,
         "scale": "linear",
-        "min": 190.,
-        "max": 290.,
+        "min": 190.0,
+        "max": 290.0,
     },
     {
         "band": "mw_183",
         "index": 3,
         "scale": "linear",
-        "min": 190.,
-        "max": 290.,
+        "min": 190.0,
+        "max": 290.0,
     },
     {
         "band": "mw_183",
         "index": 4,
         "scale": "linear",
-        "min": 190.,
-        "max": 290.,
+        "min": 190.0,
+        "max": 290.0,
     },
 ]
 QUANTILES = [0.005, 0.025, 0.165, 0.250, 0.500, 0.750, 0.835, 0.975, 0.995]
@@ -131,3 +130,5 @@ IMAGE_SIZE = 64
 INITIAL_LEARNING_RATE = 0.0005
 DECAY_STEPS_FACTOR = 0.7
 ALPHA = 0.1
+AUGMENTATION_TYPE = AugmentationType.CROP_AND_FLIP
+SUPER_RESOLUTION = True

@@ -1,13 +1,17 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 import json
 
 import numpy as np  # type: ignore
 from xarray import Dataset  # type: ignore
 
 from pps_mw_training.models.unet_model import UnetModel
-from pps_mw_training.utils.scaler import Scaler
+from pps_mw_training.utils.scaler import (
+    MinMaxScaler,
+    StandardScaler,
+    get_scaler,
+)
 
 
 @dataclass
@@ -16,8 +20,9 @@ class UnetPredictor:
     Object for handling the loading and processing of a quantile
     regression U-Net convolutional neural network model.
     """
+
     model: UnetModel
-    pre_scaler: Scaler
+    pre_scaler: Union[MinMaxScaler, StandardScaler]
     input_params: list[dict[str, Any]]
     fill_value: float
 
@@ -39,12 +44,13 @@ class UnetPredictor:
             config["n_unet_blocks"],
             config["n_features"],
             config["n_layers"],
+            config["super_resolution"],
         )
         model.build_graph(config["image_size"], n_inputs)
         model.load_weights(config["model_weights"])
         return cls(
             model,
-            Scaler.from_dict(input_parameters),
+            get_scaler(input_parameters),
             input_parameters,
             config["fill_value"],
         )
@@ -52,17 +58,15 @@ class UnetPredictor:
     @staticmethod
     def prescale(
         data: Dataset,
-        pre_scaler: Scaler,
+        pre_scaler: Union[MinMaxScaler, StandardScaler],
         input_params: list[dict[str, Any]],
         fill_value: float,
     ) -> np.ndarray:
         """Prescale data."""
         data = np.stack(
             [
-                pre_scaler.apply(
-                    data[p["band"]][:, :, :, p["index"]].values,
-                    idx,
-                ) for idx, p in enumerate(input_params)
+                pre_scaler.apply(data[p["name"]][:, :, :].values, idx)
+                for idx, p in enumerate(input_params)
             ],
             axis=3,
         )

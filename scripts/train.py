@@ -7,6 +7,7 @@ from typing import Optional
 from pps_mw_training.pipelines.pipeline_type import PipelineType
 from pps_mw_training.pipelines.pr_nordic import settings as pn_settings
 from pps_mw_training.pipelines.iwp_ici import settings as ii_settings
+from pps_mw_training.pipelines.cloud_base import settings as cb_settings
 
 
 def add_parser(
@@ -21,6 +22,7 @@ def add_parser(
     validation_fraction: float,
     test_fraction: float,
     model_config_path: Path,
+    add_file_limit: bool = False,
     missing_fraction: Optional[float] = None,
     activation: Optional[str] = None,
     db_file: Optional[Path] = None,
@@ -49,10 +51,7 @@ def add_parser(
         "--batchsize",
         dest="batch_size",
         type=int,
-        help=(
-            "Training batch size, "
-            f"default is {batchsize}"
-        ),
+        help=("Training batch size, " f"default is {batchsize}"),
         default=batchsize,
     )
     if db_file is not None:
@@ -73,21 +72,15 @@ def add_parser(
         "--epochs",
         dest="n_epochs",
         type=int,
-        help=(
-            "Number of training epochs, "
-            f"default is {n_epochs}"
-        ),
+        help=("Number of training epochs, " f"default is {n_epochs}"),
         default=n_epochs,
     )
     parser.add_argument(
-        "-l",
+        "-f",
         "--layers",
         dest="n_hidden_layers",
         type=int,
-        help=(
-            "Number of hidden layers, "
-            f"default is {n_hidden_layers}"
-        ),
+        help=("Number of hidden layers, " f"default is {n_hidden_layers}"),
         default=n_hidden_layers,
     )
     if missing_fraction is not None:
@@ -178,13 +171,24 @@ def add_parser(
         ),
         default=model_config_path.as_posix(),
     )
+    if add_file_limit is not None:
+        parser.add_argument(
+            "-c",
+            "--file-limit",
+            dest="add_file_limit",
+            type=int,
+            help=(
+                "Number of files to be processed in, "
+                "the training for cloud base"
+            ),
+        )
 
 
 def cli(args_list: list[str] = argv[1:]) -> None:
     parser = argparse.ArgumentParser(
         description="""Run the pps-mw-training app."""
     )
-    subparsers = parser.add_subparsers(dest='pipeline_type')
+    subparsers = parser.add_subparsers(dest="pipeline_type")
     add_parser(
         subparsers,
         PipelineType.PR_NORDIC,
@@ -203,6 +207,24 @@ def cli(args_list: list[str] = argv[1:]) -> None:
         pn_settings.TEST_FRACTION,
         pn_settings.MODEL_CONFIG_PATH,
         training_data_path=pn_settings.TRAINING_DATA_PATH,
+    )
+    add_parser(
+        subparsers,
+        PipelineType.CLOUD_BASE,
+        (
+            "Run the cloud_base training pipeline for the training "
+            "of a U-Net convolutional and quantile regression neural "
+            "network, for the retrieval of cloud base heights from VGAC data"
+        ),
+        cb_settings.N_LAYERS,
+        cb_settings.N_FEATURES,
+        cb_settings.BATCH_SIZE,
+        cb_settings.N_EPOCHS,
+        cb_settings.TRAIN_FRACTION,
+        cb_settings.VALIDATION_FRACTION,
+        cb_settings.TEST_FRACTION,
+        cb_settings.MODEL_CONFIG_PATH,
+        training_data_path=cb_settings.TRAINING_DATA_PATH,
     )
     add_parser(
         subparsers,
@@ -230,6 +252,7 @@ def cli(args_list: list[str] = argv[1:]) -> None:
     pipeline_type = PipelineType(args.pipeline_type)
     if pipeline_type is PipelineType.PR_NORDIC:
         from pps_mw_training.pipelines.pr_nordic import training as pnt
+
         pnt.train(
             args.n_hidden_layers,
             args.n_neurons_per_hidden_layer,
@@ -242,8 +265,25 @@ def cli(args_list: list[str] = argv[1:]) -> None:
             Path(args.model_config_path),
             args.only_evaluate,
         )
+    elif pipeline_type is PipelineType.CLOUD_BASE:
+        from pps_mw_training.pipelines.cloud_base import training as clb
+
+        clb.train(
+            args.n_hidden_layers,
+            args.n_neurons_per_hidden_layer,
+            Path(args.training_data_path),
+            args.train_fraction,
+            args.validation_fraction,
+            args.test_fraction,
+            args.batch_size,
+            args.n_epochs,
+            Path(args.model_config_path),
+            args.only_evaluate,
+            args.add_file_limit,
+        )
     else:
         from pps_mw_training.pipelines.iwp_ici import training as iit
+
         iit.train(
             args.n_hidden_layers,
             args.n_neurons_per_hidden_layer,

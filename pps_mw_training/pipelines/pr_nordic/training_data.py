@@ -9,7 +9,7 @@ import tensorflow as tf  # type: ignore
 import xarray as xr  # type: ignore
 
 
-from pps_mw_training.utils.scaler import Scaler
+from pps_mw_training.utils.scaler import get_scaler
 
 
 def get_file_info(
@@ -74,8 +74,8 @@ def _load_data(
     n = radar_data.y.size // mw_data.y.size
     mw_data = mw_data.sel(
         {
-            "y": mw_data["y"].values[0: y],
-            "x": mw_data["x"].values[0: x],
+            "y": mw_data["y"].values[0:y],
+            "x": mw_data["x"].values[0:x],
         }
     ).load()
     radar_data = radar_data.sel(
@@ -85,13 +85,14 @@ def _load_data(
         }
     ).load()
     input_params = json.loads(input_parameters)
-    scaler = Scaler.from_dict(input_params)
+    scaler = get_scaler(input_params)
     mw_data = np.stack(
         [
             scaler.apply(
                 mw_data[p["band"]][:, :, :, p["index"]].values,
                 idx,
-            ) for idx, p in enumerate(input_params)
+            )
+            for idx, p in enumerate(input_params)
         ],
         axis=3,
     )
@@ -102,24 +103,26 @@ def _load_data(
             & (radar_data.distance_radar <= distance_max)
         )
     ] = fill_value_radar
-    radar_data.dbz.values[
-        ~np.isfinite(radar_data.dbz.values)
-    ] = fill_value_radar
+    radar_data.dbz.values[~np.isfinite(radar_data.dbz.values)] = (
+        fill_value_radar
+    )
     return [
         mw_data.astype(np.float32),
         np.expand_dims(radar_data.dbz.values, axis=3).astype(np.float32),
     ]
 
 
-@tf.function(input_signature=(
-    tf.TensorSpec(shape=(None,), dtype=tf.string),
-    tf.TensorSpec(shape=(None,), dtype=tf.string),
-    tf.TensorSpec(shape=(), dtype=tf.string),
-    tf.TensorSpec(shape=(), dtype=tf.float32),
-    tf.TensorSpec(shape=(), dtype=tf.float32),
-    tf.TensorSpec(shape=(), dtype=tf.float32),
-    tf.TensorSpec(shape=(), dtype=tf.float32),
-))
+@tf.function(
+    input_signature=(
+        tf.TensorSpec(shape=(None,), dtype=tf.string),
+        tf.TensorSpec(shape=(None,), dtype=tf.string),
+        tf.TensorSpec(shape=(), dtype=tf.string),
+        tf.TensorSpec(shape=(), dtype=tf.float32),
+        tf.TensorSpec(shape=(), dtype=tf.float32),
+        tf.TensorSpec(shape=(), dtype=tf.float32),
+        tf.TensorSpec(shape=(), dtype=tf.float32),
+    )
+)
 def load_data(
     mw_files,
     radar_files,
@@ -208,8 +211,9 @@ def get_training_dataset(
             input_params=json.dumps(input_params),
             fill_value_mw=fill_value_mw,
             fill_value_radar=fill_value_radar,
-        ) for f in [
-            files[0: train_size],
+        )
+        for f in [
+            files[0:train_size],
             files[train_size: train_size + validation_size],
             files[train_size + validation_size::],
         ]

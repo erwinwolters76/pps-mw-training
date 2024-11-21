@@ -1,12 +1,17 @@
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Union
 import json
 
 import numpy as np  # type: ignore
 from xarray import Dataset  # type: ignore
 
 from pps_mw_training.models.mlp_model import MlpModel
-from pps_mw_training.utils.scaler import Scaler
+from pps_mw_training.utils.scaler import (
+    MinMaxScaler,
+    StandardScaler,
+    get_scaler,
+)
 
 
 @dataclass
@@ -17,8 +22,8 @@ class MlpPredictor:
     """
 
     model: MlpModel
-    pre_scaler: Scaler
-    post_scaler: Scaler
+    pre_scaler: Union[MinMaxScaler, StandardScaler]
+    post_scaler: Union[MinMaxScaler, StandardScaler]
     input_params: list[str]
     output_params: list[str]
     quantiles: list[float]
@@ -47,18 +52,18 @@ class MlpPredictor:
         model.load_weights(config["model_weights"])
         return cls(
             model,
-            pre_scaler=Scaler.from_dict(input_params),
-            post_scaler=Scaler.from_dict(output_params),
+            pre_scaler=get_scaler(input_params),
+            post_scaler=get_scaler(output_params),
             input_params=[p["name"] for p in input_params],
             output_params=[p["name"] for p in output_params],
             quantiles=quantiles,
-            fill_value=config["fill_value"]
+            fill_value=config["fill_value"],
         )
 
     @staticmethod
     def prescale(
         data: Dataset,
-        pre_scaler: Scaler,
+        pre_scaler: Union[MinMaxScaler, StandardScaler],
         input_params: list[str],
     ) -> np.ndarray:
         """Prescale data."""
@@ -77,14 +82,13 @@ class MlpPredictor:
                 param: (
                     ("t", "quantile"),
                     self.post_scaler.reverse(
-                        data[:, idx * n:  (idx + 1) * n],
+                        data[:, idx * n: (idx + 1) * n],
                         idx=idx,
-                    )
-                ) for idx, param in enumerate(self.output_params)
+                    ),
+                )
+                for idx, param in enumerate(self.output_params)
             },
-            coords={
-                "quantile": ("quantile", self.quantiles)
-            },
+            coords={"quantile": ("quantile", self.quantiles)},
         )
 
     def predict(
@@ -93,7 +97,9 @@ class MlpPredictor:
     ) -> Dataset:
         """Predict output from input data."""
         prescaled = self.prescale(
-            input_data, self.pre_scaler, self.input_params,
+            input_data,
+            self.pre_scaler,
+            self.input_params,
         )
         prescaled[~np.isfinite(prescaled)] = self.fill_value
         predicted = self.model(prescaled)

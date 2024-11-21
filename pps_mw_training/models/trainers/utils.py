@@ -1,9 +1,18 @@
 import gc
 import os
+from enum import Enum
 import psutil
 
 from keras.backend import clear_session  # type: ignore
 from keras.callbacks import Callback  # type: ignore
+
+
+class AugmentationType(Enum):
+    """Augmentation type."""
+
+    FLIP = "flip"
+    CROP_AND_FLIP = "crop_and_flip"
+    CROP_AND_FLIP_CENTERED = "crop_and_flip_swath_centered"
 
 
 class MemoryUsageCallback(Callback):
