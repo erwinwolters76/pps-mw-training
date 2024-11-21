@@ -103,20 +103,6 @@ def get_stats(
         axis=3,
         dtype=np.float32,
     )
-    # label_scaler = get_scaler(settings.LABEL_PARAMS)
-    # labels_all = label_scaler.reverse(labels_all, 0)
-    # preds_all = label_scaler.reverse(preds_all, 0)
-    # fill_value_mask = inputs_all == config["fill_value"]
-    # input_scaler = get_scaler(input_params)
-    # inputs_all = np.stack(
-    #     [
-    #         input_scaler.reverse(inputs_all[:, :, :, idx], idx)
-    #         for idx in range(len(input_params))
-    #     ],
-    #     axis=3,
-    # )
-    # inputs_all[fill_value_mask] = np.nan
-
     plot_preds(
         labels_all,
         preds_all[:, :, :, imedian],
